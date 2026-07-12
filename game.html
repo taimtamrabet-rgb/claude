@@ -557,9 +557,9 @@ const NATIONAL_SCHOOL_POOL = 18000;
 const COLLEGE_DIVISION_POOL = 350;
 
 const SCHOOL_TYPES = {
-  public: { label: "Public School", cost: 0, desc: "The standard neighborhood school.", requirement: () => true },
-  sports: { label: "Sports Academy", cost: 2500, desc: "A specialized athletic program with better coaching, training, and tournament pedigree.", requirement: (c) => !!c.madeTeam || c.athleticism >= 6 },
-  private: { label: "Private School (Gifted Program)", cost: 4000, desc: "A selective private school for high-achieving students, with stronger academics.", requirement: (c) => c.smarts >= 7 || c.gradeRaw >= 75 },
+  public: { label: "Public School", cost: 0, scholarship: false, desc: "The standard neighborhood school.", requirement: () => true },
+  sports: { label: "Sports Academy", cost: 0, scholarship: true, desc: "A specialized athletic program with better coaching, training, and tournament pedigree — admission is an athletic scholarship, free of charge.", requirement: (c) => !!c.madeTeam || c.athleticism >= 6 },
+  private: { label: "Private School (Gifted Program)", cost: 0, scholarship: true, desc: "A selective private school for high-achieving students, with stronger academics — admission is an academic scholarship, free of charge.", requirement: (c) => c.smarts >= 7 || c.gradeRaw >= 75 },
 };
 
 /* ============================== EVENTS ============================== */
@@ -943,7 +943,7 @@ function transferSchool(key) {
   c.wealth -= target.cost;
   c.schoolType = key;
   c.schoolTransferUsesThisYear = 1;
-  c.log(target.cost ? `Transferred to ${target.label} for ${formatMoney(target.cost, character.country)}.` : `Transferred to ${target.label}.`);
+  c.log(target.scholarship ? `Earned a scholarship and transferred to ${target.label} — free of charge.` : `Transferred to ${target.label}.`);
   activeFlow = null;
   render();
 }
@@ -1781,7 +1781,7 @@ function renderFlowOverlay() {
       const t = SCHOOL_TYPES[key];
       const current = key === c.schoolType;
       const eligible = t.requirement(c);
-      const value = current ? "Current school" : !eligible ? `🔒 Requirements not met` : t.cost ? `${formatMoney(t.cost, character.country)} — ${t.desc}` : t.desc;
+      const value = current ? "Current school" : !eligible ? `🔒 Requirements not met` : t.scholarship ? `🎓 Scholarship (free) — ${t.desc}` : t.desc;
       return rowBtnHTML("🏫", t.label, value, "transferSchool", key, current || !eligible);
     }).join("");
     html = overlayShell("Transfer School", `<p class="overlay-text">Where will ${esc(c.first)} go to school?</p>${rows}`, "closeFlow");
