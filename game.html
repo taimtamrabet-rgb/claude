@@ -10,12 +10,48 @@
     --border: #d9cfb4; --divider: #e3d9bc; --muted: #5b5340; --muted2: #4a4432;
     --faded: #c9c1a6; --locked: #9a9a8a; --hilite: #fff8e8; --font: Georgia, 'Times New Roman', serif;
   }
-  :root[data-ui-theme="modern"] {
-    --ink: #17223B; --paper: #F4F6FA; --gold: #2F6FED; --stamp: #2563EB; --teal: #7C3AED;
-    --border: #D7DEEA; --divider: #E4E9F2; --muted: #5B6478; --muted2: #333B4F;
-    --faded: #B9C3D6; --locked: #9AA3B5; --hilite: #EAF1FF; --font: 'Segoe UI', Arial, sans-serif;
+  :root[data-ui-theme="playful"] {
+    --ink: #37325A; --paper: #FBF3EA; --gold: #F2A93C; --stamp: #8467E0; --teal: #34B8A6;
+    --border: #ECDCCB; --divider: #F3E6D8; --muted: #8D86A3; --muted2: #6C6488;
+    --faded: #DCD2EC; --locked: #C6BEDA; --hilite: #FCEEDD;
+    --hue-job: #8467E0; --hue-love: #F2668B; --hue-activity: #34B8A6;
+    --hue-money: #F2A93C; --hue-shop: #4C9FE0; --hue-keys: #4CBB7A;
+    --hue-health: #EE6F62; --hue-look: #F2668B; --hue-smarts: #4C9FE0; --hue-happy: #F2A93C;
+    --font: 'Trebuchet MS', 'Segoe UI Rounded', 'Nunito', Verdana, sans-serif;
   }
   * { box-sizing: border-box; }
+  /* ---- playful theme: rounder, bouncier shapes ---- */
+  [data-ui-theme="playful"] .frame { border-width: 0; border-radius: 28px; box-shadow: 0 14px 0 rgba(45,42,69,.08), 0 24px 55px rgba(123,77,255,.28); }
+  [data-ui-theme="playful"] .topbar { background: var(--stamp); border-radius: 28px 28px 0 0; }
+  [data-ui-theme="playful"] .eyebrow { color: rgba(255,255,255,.75); }
+  [data-ui-theme="playful"] .topbar .sub { color: rgba(255,255,255,.75); }
+  [data-ui-theme="playful"] button.tile { border-radius: 18px; border-width: 2px; transition: transform .12s ease; }
+  [data-ui-theme="playful"] button.tile:active { transform: scale(.96); }
+  [data-ui-theme="playful"] button.tile .icon { border-radius: 12px; }
+  [data-ui-theme="playful"] .btn-primary { border-radius: 999px; box-shadow: 0 5px 0 rgba(0,0,0,.18); transition: transform .08s ease; }
+  [data-ui-theme="playful"] .btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  [data-ui-theme="playful"] .btn-line { border-radius: 14px; border-width: 2px; font-weight: 700; }
+  [data-ui-theme="playful"] .btn-chip { border-radius: 999px; border-width: 2px; font-weight: 700; }
+  [data-ui-theme="playful"] .round-btn { border-radius: 999px; border-width: 2px; }
+  [data-ui-theme="playful"] .stamp-badge { transform: rotate(0deg); border-radius: 999px; border-width: 2px; }
+  [data-ui-theme="playful"] .overlay-card { border-radius: 24px; border-width: 0; box-shadow: 0 20px 60px rgba(45,42,69,.4); }
+  [data-ui-theme="playful"] .overlay-close { border-radius: 999px; border-width: 2px; }
+  [data-ui-theme="playful"] .row-item .ricon { border-radius: 10px; }
+  [data-ui-theme="playful"] .propcard { border-radius: 16px; border-width: 2px; }
+  [data-ui-theme="playful"] .statbar-fill, [data-ui-theme="playful"] .perf-fill { border-radius: 999px; }
+  [data-ui-theme="playful"] .tile-occupation .icon { background: var(--hue-job); }
+  [data-ui-theme="playful"] .tile-relationships .icon { background: var(--hue-love); }
+  [data-ui-theme="playful"] .tile-activities .icon { background: var(--hue-activity); }
+  [data-ui-theme="playful"] .tile-assets .icon { background: var(--hue-money); }
+  [data-ui-theme="playful"] .tile-shopping .icon { background: var(--hue-shop); }
+  [data-ui-theme="playful"] .tile-licenses .icon { background: var(--hue-keys); }
+  [data-ui-theme="playful"] .stat-health .statbar-fill { background: var(--hue-health); }
+  [data-ui-theme="playful"] .stat-look .statbar-fill { background: var(--hue-look); }
+  [data-ui-theme="playful"] .stat-smarts .statbar-fill { background: var(--hue-smarts); }
+  [data-ui-theme="playful"] .stat-happiness .statbar-fill { background: var(--hue-happy); }
+  @media (prefers-reduced-motion: reduce) {
+    [data-ui-theme="playful"] button.tile, [data-ui-theme="playful"] .btn-primary { transition: none; }
+  }
   body { margin: 0; min-height: 100vh; background: var(--ink); font-family: var(--font); }
   a.back-link { color: var(--muted); font-size: .8rem; text-decoration: none; }
   .center-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -543,7 +579,7 @@ function deathChance(age, health) {
 
 /* ============================== THEMES ============================== */
 function applyThemeVars(mode) {
-  document.documentElement.setAttribute("data-ui-theme", mode === "modern" ? "modern" : "passport");
+  document.documentElement.setAttribute("data-ui-theme", mode === "playful" ? "playful" : "passport");
 }
 
 /* ============================== STATE ============================== */
@@ -1159,7 +1195,7 @@ function advanceTime() {
 /* ============================== RENDER: CREATE ============================== */
 function statBarHTML(label, value, max) {
   max = max || 10;
-  return `<div class="statbar-row"><span class="lbl">${esc(label)}</span>
+  return `<div class="statbar-row stat-${label.toLowerCase()}"><span class="lbl">${esc(label)}</span>
     <div class="statbar-track"><div class="statbar-fill" style="width:${(value / max) * 100}%;"></div></div>
     <span class="val">${value}</span></div>`;
 }
@@ -1236,7 +1272,7 @@ function renderCreateScreen() {
           <label class="field-label">Interface style</label>
           <div class="chip-wrap">
             <button class="btn-chip ${d.uiTheme === "passport" ? "active" : ""}" data-action="setUiTheme" data-arg="passport">Passport</button>
-            <button class="btn-chip ${d.uiTheme === "modern" ? "active" : ""}" data-action="setUiTheme" data-arg="modern">Modern</button>
+            <button class="btn-chip ${d.uiTheme === "playful" ? "active" : ""}" data-action="setUiTheme" data-arg="playful">Playful</button>
           </div>
         </div>
         <button class="btn-primary" data-action="startLife" ${d.first.trim() && d.last.trim() ? "" : "disabled"}>Stamp Passport &amp; Begin Life</button>
@@ -1286,7 +1322,7 @@ function renderDashboardBody() {
   const recent = [...c.logEntries].reverse().slice(0, 4);
   return `
     <div class="tile-grid">${tiles.map((t) => `
-      <button class="tile ${t.accent ? "accent" : ""}" data-action="nav" data-arg="${t.key}">
+      <button class="tile tile-${t.key} ${t.accent ? "accent" : ""}" data-action="nav" data-arg="${t.key}">
         <span class="icon">${t.icon}</span><span class="tlabel">${esc(t.label)}</span>
       </button>`).join("")}</div>
     <button class="btn-primary" data-action="ageUp">${character.ageMode === "monthly" ? "Next month →" : "Age up →"}</button>
