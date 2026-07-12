@@ -447,6 +447,106 @@ const TEAM_POOLS = {
   "American Football": ["Charlotte Barons", "Indianapolis Sentinels", "St. Louis Gladiators", "Buffalo Blizzard", "San Diego Mariners", "Cincinnati Foundry", "Tampa Bay Corsairs", "Minneapolis Timberwolves"],
 };
 const DRAFT_ROUNDS = { "Basketball": 2, "Baseball": 10, "American Football": 7 };
+
+const SPORT_META = {
+  "Basketball": { games: 82, leagueSize: 30, positions: ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"] },
+  "Baseball": { games: 162, leagueSize: 30, positions: ["Pitcher", "Catcher", "First Baseman", "Second Baseman", "Third Baseman", "Shortstop", "Left Fielder", "Center Fielder", "Right Fielder"] },
+  "American Football": { games: 17, leagueSize: 32, positions: ["Quarterback", "Running Back", "Wide Receiver", "Tight End", "Linebacker", "Cornerback", "Safety", "Defensive Lineman", "Kicker"] },
+};
+const FOOTBALL_DEFENSE_POSITIONS = ["Linebacker", "Cornerback", "Safety", "Defensive Lineman"];
+
+const round1 = (v) => Math.round(Math.max(0, v) * 10) / 10;
+const round2 = (v) => Math.round(Math.max(0, v) * 100) / 100;
+const round3 = (v) => Math.round(Math.max(0, v) * 1000) / 1000;
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function computeSeasonRecord(sport, perf) {
+  const meta = SPORT_META[sport];
+  const winPct = clamp01(0.28 + (perf - 50) / 140 + (Math.random() * 0.12 - 0.06));
+  const wins = Math.round(meta.games * winPct);
+  const losses = meta.games - wins;
+  const finish = Math.max(1, Math.min(meta.leagueSize, Math.round(1 + (1 - winPct) * (meta.leagueSize - 1))));
+  let status;
+  if (finish === 1) status = Math.random() < 0.55 ? "League Champions" : "Runner-Up";
+  else if (finish <= Math.ceil(meta.leagueSize / 3)) status = "Playoff Appearance";
+  else if (finish <= Math.ceil((meta.leagueSize * 2) / 3)) status = "Just Missed Playoffs";
+  else status = "Missed Playoffs";
+  return { games: meta.games, leagueSize: meta.leagueSize, wins, losses, finish, status };
+}
+
+function generateSeasonStats(sport, position, perf) {
+  const base = clamp01(perf / 100);
+  if (sport === "Basketball") {
+    const emphasis = {
+      "Point Guard": { pts: 0.75, reb: 0.5, ast: 1.7, stl: 1.3, blk: 0.3 },
+      "Shooting Guard": { pts: 1.3, reb: 0.6, ast: 0.8, stl: 1.0, blk: 0.3 },
+      "Small Forward": { pts: 1.1, reb: 0.9, ast: 0.9, stl: 1.0, blk: 0.5 },
+      "Power Forward": { pts: 1.0, reb: 1.3, ast: 0.6, stl: 0.7, blk: 1.0 },
+      "Center": { pts: 0.85, reb: 1.6, ast: 0.4, stl: 0.5, blk: 1.7 },
+    }[position];
+    return {
+      "Points per Game": round1(6 + base * 24 * emphasis.pts),
+      "Rebounds per Game": round1(2 + base * 10 * emphasis.reb),
+      "Assists per Game": round1(1 + base * 9 * emphasis.ast),
+      "Steals per Game": round1(0.4 + base * 2.2 * emphasis.stl),
+      "Blocks per Game": round1(0.2 + base * 2.4 * emphasis.blk),
+    };
+  }
+  if (sport === "American Football") {
+    if (position === "Quarterback") return {
+      "Passing Yards/Game": round1(180 + base * 140),
+      "Passing TDs/Game": round1(0.8 + base * 1.6),
+      "Completion %": round1(55 + base * 15),
+      "Interceptions/Game": round1(Math.max(0.2, 1.2 - base * 0.8)),
+    };
+    if (position === "Running Back") return {
+      "Rushing Yards/Game": round1(35 + base * 65),
+      "Rushing TDs/Game": round1(0.3 + base * 0.7),
+      "Yards per Carry": round1(3.5 + base * 2.2),
+    };
+    if (position === "Wide Receiver" || position === "Tight End") return {
+      "Receptions/Game": round1(2.5 + base * 4.5),
+      "Receiving Yards/Game": round1(35 + base * 70),
+      "Receiving TDs/Game": round1(0.2 + base * 0.6),
+    };
+    if (position === "Kicker") return {
+      "Field Goals Made/Game": round1(1.0 + base * 1.2),
+      "Field Goal %": round1(70 + base * 22),
+    };
+    return {
+      "Tackles/Game": round1(3 + base * 6),
+      "Sacks/Game": round1(0.1 + base * 0.9),
+      "Interceptions/Game": round1(0.05 + base * 0.3),
+    };
+  }
+  // Baseball
+  if (position === "Pitcher") return {
+    "ERA": round2(Math.max(1.8, 5.2 - base * 3.0)),
+    "Strikeouts (season)": Math.round(90 + base * 140),
+    "Wins": Math.round(4 + base * 14),
+    "WHIP": round2(Math.max(0.85, 1.55 - base * 0.55)),
+  };
+  return {
+    "Batting Average": round3(0.22 + base * 0.1),
+    "Home Runs (season)": Math.round(4 + base * 32),
+    "RBIs (season)": Math.round(25 + base * 80),
+    "Stolen Bases (season)": Math.round(base * 22),
+  };
+}
+
+function rollSeasonAward(c, sport, record, position) {
+  const perf = c.jobPerformance || 50;
+  const candidates = [];
+  if (c.proSeasonNumber === 1 && perf >= 55 && Math.random() < 0.4) candidates.push("Rookie of the Year");
+  if (record.status === "League Champions" && Math.random() < 0.35) candidates.push("Finals MVP");
+  if (perf >= 85 && record.finish <= 3 && Math.random() < 0.25) candidates.push("Most Valuable Player (MVP)");
+  if (perf >= 70 && Math.random() < 0.3) candidates.push("All-Star Selection");
+  if (perf >= 75 && (sport !== "American Football" || FOOTBALL_DEFENSE_POSITIONS.includes(position)) && Math.random() < 0.2) candidates.push("Defensive Player of the Year");
+  return candidates.length ? randChoice(candidates) : null;
+}
 const TOURNAMENT_TIERS = {
   Regional: { label: "Regional Tournament", rounds: ["Regional Round", "Regional Final"], minRank: null, chanceMod: 0 },
   State: { label: "State Tournament", rounds: ["State Quarterfinal", "State Semifinal", "State Championship"], minRank: 3000, chanceMod: -0.05 },
@@ -621,7 +721,7 @@ function newCtx(char) {
     madeTeam: null, month: 0, housing: null, schoolType: "public",
     studyUsesThisYear: 0, trainUsesThisYear: 0, partTimeUsesThisYear: 0,
     tournamentUsesThisYear: 0, marchMadnessUsesThisYear: 0, workHardUsesThisYear: 0, schoolTransferUsesThisYear: 0,
-    proSport: null, collegeFootballYears: 0, gradNotified: false,
+    proSport: null, proTeam: null, proPosition: null, proSeasonNumber: 0, collegeFootballYears: 0, gradNotified: false,
     pilot: { licenseLevel: 0, hours: 0, lessonsThisYear: 0 },
     carLicense: false, pilotStudentLicense: false,
     pets: [], cars: [], realEstate: null,
@@ -804,7 +904,8 @@ function quitJob() {
   const c = ctx;
   if (!c.job) return;
   c.log(`Quit your job as a ${c.job}.`);
-  c.job = null; c.jobBase = null; c.jobTier = 0; c.salary = 0; c.jobPerformance = 50; c.proSport = null;
+  c.job = null; c.jobBase = null; c.jobTier = 0; c.salary = 0; c.jobPerformance = 50;
+  c.proSport = null; c.proTeam = null; c.proPosition = null; c.proSeasonNumber = 0;
   render();
 }
 function dropoutAgeFor() { return DROPOUT_AGE[character.country] || 16; }
@@ -999,6 +1100,7 @@ function acceptDraft() {
   const c = ctx; const f = activeFlow;
   const track = PRO_TRACKS[f.sport];
   c.proSport = f.sport; c.jobBase = f.sport; c.jobTier = 0; c.job = track[0].title; c.salary = f.salary; c.jobPerformance = 55;
+  c.proTeam = f.team; c.proPosition = randChoice(SPORT_META[f.sport].positions); c.proSeasonNumber = 0;
   c.log(`Drafted in Round ${f.round}, Pick ${f.pick} by the ${f.team} (${track[0].title}) — ${formatMoney(f.salary, c.country)}/yr.`);
   activeFlow = null;
   render();
@@ -1202,18 +1304,41 @@ function doYearAdvance() {
     render();
     return;
   }
-  if (c.path === "college" && nextAge === 22 && !c.gradNotified) {
+  age = nextAge;
+  updateRankings();
+
+  if (c.job && c.proSport && !c.retired) {
+    c.proSeasonNumber = (c.proSeasonNumber || 0) + 1;
+    const record = computeSeasonRecord(c.proSport, c.jobPerformance || 50);
+    const stats = generateSeasonStats(c.proSport, c.proPosition, c.jobPerformance || 50);
+    const award = rollSeasonAward(c, c.proSport, record, c.proPosition);
+    if (award) c.trophies.push(`${award} — Season ${c.proSeasonNumber} (age ${age})`);
+    c.log(`Finished Season ${c.proSeasonNumber} with the ${c.proTeam}: ${record.wins}-${record.losses}, ${record.status}.`);
+    activeFlow = { type: "seasonrecap", sport: c.proSport, record, stats, award, season: c.proSeasonNumber, position: c.proPosition, team: c.proTeam };
+    render();
+    return;
+  }
+
+  if (c.path === "college" && age === 22 && !c.gradNotified) {
     c.gradNotified = true; c.uniGraduated = true;
-    c.age = nextAge; age = nextAge;
     activeFlow = { type: "graduation" };
     render();
     return;
   }
-  age = nextAge;
-  updateRankings();
-  rollEvent(nextAge);
+  rollEvent(age);
 }
 function continueAfterGraduation() { activeFlow = null; rollEvent(age); }
+function continueAfterSeasonRecap() {
+  activeFlow = null;
+  const c = ctx;
+  if (c.path === "college" && age === 22 && !c.gradNotified) {
+    c.gradNotified = true; c.uniGraduated = true;
+    activeFlow = { type: "graduation" };
+    render();
+    return;
+  }
+  rollEvent(age);
+}
 
 function advanceTime() {
   const c = ctx;
@@ -1441,6 +1566,10 @@ function pageOccupation() {
 
   if (c.job) {
     html += rowHTML("💼", c.job, `${formatMoney(c.salary, character.country)}/yr (${formatMoney(netOfTax(c.salary, character.country), character.country)} after tax)`);
+    if (c.proSport) {
+      html += rowHTML("🎽", "Team", `${c.proTeam} · ${c.proPosition}`);
+      html += rowHTML("📅", "Seasons Played", `${c.proSeasonNumber}`);
+    }
     html += `<div class="section-label">Job Performance</div>` + perfBarHTML("Performance", c.jobPerformance);
     html += rowBtnHTML("📈", "Work Harder", c.workHardUsesThisYear >= 1 ? "Used for this year" : "Once a year", "workHarder", null, c.workHardUsesThisYear >= 1);
     html += rowBtnHTML("🚪", "Quit Job", "Leave your current job", "quitJob");
@@ -1661,6 +1790,22 @@ function renderFlowOverlay() {
   } else if (f.type === "migrate") {
     if (f.step === "country") html = overlayShell("Migrate", `<p class="overlay-text">Where will ${esc(c.first)} migrate to?</p><div class="chip-wrap">${Object.keys(COUNTRIES).map((ctry) => `<button class="btn-chip" data-action="pickMigrateCountry" data-arg="${esc(ctry)}">${esc(ctry)}</button>`).join("")}</div>`);
     else html = overlayShell("Migrate", `<p class="overlay-text">Which city in ${esc(f.country)}?</p><div class="chip-wrap">${Object.keys(COUNTRIES[f.country].cities).map((ct) => `<button class="btn-chip" data-action="pickMigrateCity" data-arg="${esc(ct)}">${esc(ct)}</button>`).join("")}</div>`);
+  } else if (f.type === "seasonrecap") {
+    const r = f.record;
+    let body = `<p class="overlay-text" style="text-align:center;font-weight:700;">🏆 Season ${f.season}</p>
+      <p class="overlay-text" style="text-align:center;">You just finished your ${ordinal(f.season)} season as a professional ${esc(f.sport)} player.</p>
+      <div class="net-line"><span>Team</span><span>${esc(f.team)}</span></div>
+      <div class="net-line"><span>Record</span><span>${r.wins}-${r.losses}</span></div>
+      <div class="net-line"><span>League Finish</span><span>${ordinal(r.finish)} out of ${r.leagueSize}</span></div>
+      <div class="net-line"><span>Status</span><span>${esc(r.status)}</span></div>
+      <div class="net-line"><span>Position</span><span>${esc(f.position)}</span></div>
+      <div class="section-label">Season Stats</div>`;
+    body += Object.entries(f.stats).map(([label, val]) => `<div class="net-line"><span>${esc(label)}</span><span>${val}</span></div>`).join("");
+    body += f.award
+      ? `<div class="net-line" style="color:var(--stamp);font-weight:700;"><span>🏅 Award</span><span>${esc(f.award)}</span></div>`
+      : `<div class="net-line"><span>Award</span><span>None this season</span></div>`;
+    body += `<button class="btn-primary" style="margin-top:14px;" data-action="continueAfterSeasonRecap">Continue</button>`;
+    html = overlayShell(null, body);
   } else if (f.type === "graduation") {
     html = overlayShell(null, `<p class="overlay-text" style="text-align:center;font-weight:700;color:var(--stamp);">🎓 Congratulations!</p><p class="overlay-text" style="text-align:center;">${esc(c.first)} graduated from college${c.degree ? ` with a degree in ${esc(c.degree)}` : ""}!</p><button class="btn-primary" data-action="continueAfterGraduation">Continue</button>`);
   } else if (f.type === "dating") {
@@ -1810,6 +1955,7 @@ const ACTIONS = {
   goOnDate: (arg) => goOnDate(arg === "1"),
 
   continueAfterGraduation: () => continueAfterGraduation(),
+  continueAfterSeasonRecap: () => continueAfterSeasonRecap(),
   restart: () => {
     screen = "create"; character = null; ctx = null; age = 0; activeFlow = null; endResult = null;
     createDraft = { first: "Alex", last: "Rivera", gender: "Male", country: "United States", city: "New York",
