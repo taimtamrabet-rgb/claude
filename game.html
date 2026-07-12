@@ -203,7 +203,14 @@ const JOB_TRACKS = {
   "Translator": [{ title: "Junior Translator", salary: 35000 }, { title: "Translator", salary: 50000 }, { title: "Senior Translator", salary: 68000 }],
   "Political Aide": [{ title: "Campaign Staffer", salary: 32000 }, { title: "Political Aide", salary: 50000 }, { title: "Chief of Staff", salary: 92000 }],
   "Musician": [{ title: "Session Musician", salary: 25000 }, { title: "Musician", salary: 40000 }, { title: "Recording Artist", salary: 78000 }],
+  "Retail Associate": [{ title: "Retail Associate", salary: 26000 }, { title: "Store Supervisor", salary: 34000 }, { title: "Store Manager", salary: 48000 }],
+  "Warehouse Worker": [{ title: "Warehouse Associate", salary: 28000 }, { title: "Warehouse Supervisor", salary: 38000 }, { title: "Warehouse Manager", salary: 52000 }],
+  "Delivery Driver": [{ title: "Delivery Driver", salary: 30000 }, { title: "Lead Driver", salary: 36000 }, { title: "Fleet Supervisor", salary: 45000 }],
+  "Construction Worker": [{ title: "Construction Laborer", salary: 32000 }, { title: "Skilled Tradesperson", salary: 48000 }, { title: "Site Foreman", salary: 62000 }],
+  "Customer Service Rep": [{ title: "Customer Service Rep", salary: 29000 }, { title: "Team Lead", salary: 38000 }, { title: "Support Manager", salary: 50000 }],
+  "Security Guard": [{ title: "Security Guard", salary: 28000 }, { title: "Senior Security Officer", salary: 36000 }, { title: "Security Supervisor", salary: 46000 }],
 };
+const NO_DEGREE_JOBS = ["Retail Associate", "Warehouse Worker", "Delivery Driver", "Construction Worker", "Customer Service Rep", "Security Guard"];
 
 const PRO_TRACKS = {
   "Basketball": [{ title: "Pro Basketball Rookie", salary: 1000000 }, { title: "Pro Basketball Starter", salary: 4000000 }, { title: "Pro Basketball All-Star", salary: 12000000 }, { title: "Pro Basketball Superstar", salary: 35000000 }],
@@ -660,11 +667,9 @@ const EVENTS = [
   ]),
 ];
 
-const DEGREE_LOCKED_JOBS = ["Corporate Lawyer", "Physician", "Nurse", "Architect", "Psychologist"];
-
 function buildJobMarket(ctx) {
   const eligible = ctx.degree && DEGREE_QUALIFIES[ctx.degree] ? DEGREE_QUALIFIES[ctx.degree] : null;
-  const pool = eligible || JOBS.filter((j) => !DEGREE_LOCKED_JOBS.includes(j));
+  const pool = eligible || NO_DEGREE_JOBS;
   const postings = [];
   const cycle = (arr) => { const out = []; while (out.length < 20) out.push(...[...arr].sort(() => Math.random() - 0.5)); return out; };
   const primary = cycle(pool);
