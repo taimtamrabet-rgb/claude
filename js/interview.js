@@ -6,7 +6,7 @@ const INTERVIEW = {};
 
 const IV_TIMER_SECONDS = 30;
 const IV_QUESTION_COUNT = 5;
-const DEFAULT_IV_WEIGHTS = { easy: 0.45, medium: 0.35, hard: 0.20 };
+const DEFAULT_IV_WEIGHTS = { easy: 0.6, medium: 0.3, hard: 0.1 };
 
 function pickInterviewQuestions(weights, count) {
   const byTier = { easy: [], medium: [], hard: [] };

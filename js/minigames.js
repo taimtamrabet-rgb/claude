@@ -67,6 +67,39 @@ function genQ_eps() {
   };
 }
 
+// Plain office-arithmetic questions -- no finance jargon required.
+function genQ_timeSum() {
+  const a = randInt(15, 60), b = randInt(15, 60), c = randInt(15, 60);
+  const total = a + b + c;
+  const opts = shuffleOptions(total, [total - 15, total + 10, total + 25]);
+  return {
+    text: `You have three calls today lasting ${a}, ${b}, and ${c} minutes. How much total time is that?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + " min"
+  };
+}
+
+function genQ_budgetSplit() {
+  const people = randInt(3, 6);
+  const perPerson = randInt(15, 60);
+  const total = perPerson * people;
+  const opts = shuffleOptions(perPerson, [perPerson - 5, perPerson + 5, perPerson + 10].map(v => Math.max(1, v)));
+  return {
+    text: `The team orders $${total} of lunch, split evenly ${people} ways. How much does each person owe?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => "$" + v
+  };
+}
+
+function genQ_emailPace() {
+  const emails = randInt(12, 40);
+  const perTenMin = randInt(2, 5);
+  const minutes = Math.round((emails / perTenMin) * 10);
+  const opts = shuffleOptions(minutes, [Math.round(minutes * 0.6), Math.round(minutes * 1.4), Math.round(minutes * 1.7)]);
+  return {
+    text: `You need to send ${emails} follow-up emails and can do about ${perTenMin} per 10 minutes. Roughly how long will that take?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + " min"
+  };
+}
+
 function shuffleOptions(correctVal, distractors) {
   const vals = [correctVal, ...distractors];
   // Fisher-Yates
@@ -77,16 +110,16 @@ function shuffleOptions(correctVal, distractors) {
   return { options: vals, correctIndex: vals.indexOf(correctVal) };
 }
 
-const CRUNCH_EASY_GENERATORS = [genQ_growth, genQ_multiple];
-const CRUNCH_HARD_GENERATORS = [genQ_wacc, genQ_eps];
+const CRUNCH_EASY_GENERATORS = [genQ_timeSum, genQ_budgetSplit, genQ_emailPace, genQ_growth];
+const CRUNCH_HARD_GENERATORS = [genQ_multiple, genQ_wacc, genQ_eps];
 const MODEL_CRUNCH_TIMER_SECONDS = 20;
 
 function crunchDifficultyWeights() {
-  if (!STATE.employment) return { easy: 0.6, hard: 0.4 }; // MBA study / unemployed practice
+  if (!STATE.employment) return { easy: 0.8, hard: 0.2 }; // MBA study / unemployed practice
   const s = titleSeniorityLabel();
-  if (s === "Analyst") return { easy: 0.75, hard: 0.25 };
-  if (s === "Associate") return { easy: 0.5, hard: 0.5 };
-  return { easy: 0.3, hard: 0.7 }; // VP+
+  if (s === "Analyst") return { easy: 0.9, hard: 0.1 };
+  if (s === "Associate") return { easy: 0.65, hard: 0.35 };
+  return { easy: 0.45, hard: 0.55 }; // VP+
 }
 
 function pickCrunchGenerator() {

@@ -35,37 +35,37 @@ DATA.FIRMS = [
   {
     id: "kessler", name: "Kessler Harbor & Co.", type: "IB", tier: "Middle Market",
     mult: 0.80, reqNetworking: 5, reqComm: 5, prestige: 35,
-    interviewWeights: { easy: 0.65, medium: 0.30, hard: 0.05 },
+    interviewWeights: { easy: 1.0, medium: 0, hard: 0 },
     blurb: "A scrappy regional M&A shop. Long hours, thinner deals, easier door in."
   },
   {
     id: "ashford", name: "Ashford & Cole", type: "IB", tier: "Elite Boutique",
     mult: 1.05, reqNetworking: 30, reqComm: 30, prestige: 72,
-    interviewWeights: { easy: 0.40, medium: 0.40, hard: 0.20 },
+    interviewWeights: { easy: 0.60, medium: 0.30, hard: 0.10 },
     blurb: "Elite boutique advisory. Small teams, huge deals, brutal interviews."
   },
   {
     id: "blackrose", name: "Blackrose Stanton", type: "IB", tier: "Bulge Bracket",
     mult: 1.15, reqNetworking: 50, reqComm: 45, prestige: 90,
-    interviewWeights: { easy: 0.30, medium: 0.42, hard: 0.28 },
+    interviewWeights: { easy: 0.45, medium: 0.35, hard: 0.20 },
     blurb: "A household-name global bank. The classic Wall Street grind."
   },
   {
     id: "continental", name: "Continental Vance", type: "IB", tier: "Bulge Bracket",
     mult: 1.20, reqNetworking: 58, reqComm: 52, prestige: 96,
-    interviewWeights: { easy: 0.22, medium: 0.43, hard: 0.35 },
+    interviewWeights: { easy: 0.35, medium: 0.40, hard: 0.25 },
     blurb: "The most prestigious address in banking. Everyone wants in."
   },
   {
     id: "ironbridge", name: "Ironbridge Capital", type: "PE", tier: "Middle Market PE",
     mult: 0.90, reqNetworking: 25, reqComm: 20, prestige: 60, minIBWeeks: 96,
-    interviewWeights: { easy: 0.35, medium: 0.40, hard: 0.25 },
+    interviewWeights: { easy: 0.45, medium: 0.35, hard: 0.20 },
     blurb: "Mid-market buyout shop. Wants ex-banking analysts who can model."
   },
   {
     id: "summit", name: "Summit Crown Partners", type: "PE", tier: "Mega Fund",
     mult: 1.30, reqNetworking: 65, reqComm: 55, prestige: 99, minIBWeeks: 96,
-    interviewWeights: { easy: 0.20, medium: 0.40, hard: 0.40 },
+    interviewWeights: { easy: 0.30, medium: 0.40, hard: 0.30 },
     blurb: "A legendary mega-fund. The most coveted seat in all of finance."
   }
 ];
@@ -127,11 +127,11 @@ DATA.INTERVIEW_QUESTIONS = [
       "EV is only used for private companies."
     ], correct: 1, category: "technical", tier: "medium" },
   { q: "Why would you use multiple valuation methodologies?", options: [
-      "You wouldn't, DCF is always correct.",
+      "You wouldn't, one method is always correct.",
       "Because each method has different assumptions/blind spots, and triangulating gives a more defensible range of value.",
       "Because clients demand exactly three slides.",
       "To make the pitch book longer."
-    ], correct: 1, category: "technical", tier: "easy" },
+    ], correct: 1, category: "technical", tier: "medium" },
   { q: "What happens to Enterprise Value if a company issues debt to buy back stock?", options: [
       "EV increases because debt goes up and cash may fall, while equity value falls.",
       "EV stays exactly the same, always.",
@@ -149,7 +149,7 @@ DATA.INTERVIEW_QUESTIONS = [
       "Acquiring a company using a significant amount of debt, with the target's own cash flows used to pay down that debt.",
       "A merger of two equally-sized companies.",
       "Selling a division of a company to the public via IPO."
-    ], correct: 1, category: "technical", tier: "easy" },
+    ], correct: 1, category: "technical", tier: "medium" },
   { q: "In an LBO model, what mainly drives investor returns?", options: [
       "EBITDA growth, multiple expansion, and debt paydown.",
       "The color of the pitch book cover.",
@@ -173,7 +173,7 @@ DATA.INTERVIEW_QUESTIONS = [
       "A rough proxy for operating cash flow, stripping out financing, tax, and non-cash effects.",
       "Total enterprise value.",
       "The company's stock price."
-    ], correct: 1, category: "technical", tier: "easy" },
+    ], correct: 1, category: "technical", tier: "medium" },
   { q: "Two companies have the same P/E ratio. Are they equally valued?", options: [
       "Yes, P/E is a perfect measure of value on its own.",
       "Not necessarily — capital structure, growth, and accounting differences can make P/E misleading without context.",
@@ -227,7 +227,7 @@ DATA.INTERVIEW_QUESTIONS = [
       "Flag it to your VP, sanity-check each add-back against normal practice, and push back on anything unsupported.",
       "Delete the entire model.",
       "Tell the client their business is worthless."
-    ], correct: 1, category: "technical", tier: "medium" },
+    ], correct: 1, category: "technical", tier: "hard" },
   { q: "What is the 'terminal value' in a DCF and why does it usually dominate the valuation?", options: [
       "It's a rounding error that can be ignored.",
       "It captures the value of all cash flows beyond the explicit forecast period, and often represents 60-80% of total value since it's a perpetuity.",
@@ -245,7 +245,7 @@ DATA.INTERVIEW_QUESTIONS = [
       "Lean on revenue multiples, EV/EBITDA if positive, DCF, or sector-specific metrics (e.g., users, ARR) instead of P/E.",
       "Assume its value is zero.",
       "Use only the book value of its equipment."
-    ], correct: 1, category: "technical", tier: "medium" },
+    ], correct: 1, category: "technical", tier: "hard" },
   { q: "Describe your ideal team culture.", options: [
       "Everyone works alone and never talks to each other.",
       "High ownership, direct feedback, and people who cover for each other when the workload spikes.",
@@ -257,6 +257,66 @@ DATA.INTERVIEW_QUESTIONS = [
       "Having grown into a role with more deal ownership and client responsibility — whether that's a senior banking seat or the buy-side.",
       "Retired.",
       "I haven't thought about it at all."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Your boss asks you to redo a report by tomorrow morning. What do you do?", options: [
+      "Ignore it until you feel like doing it.",
+      "Prioritize it tonight, get it done, and confirm with your boss before the deadline.",
+      "Tell your boss it's impossible.",
+      "Do it halfway and hope no one notices."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "You spot a typo in a client-facing document minutes before it's sent out. What do you do?", options: [
+      "Say nothing, it's probably fine.",
+      "Flag it immediately so it can be fixed before it goes out.",
+      "Send it anyway and mention it later.",
+      "Blame whoever wrote it."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "A coworker takes credit for your idea in a meeting. What's the best response?", options: [
+      "Yell at them in front of everyone.",
+      "Calmly clarify your contribution afterward and move on professionally.",
+      "Start taking credit for their work too.",
+      "Quit on the spot."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "You're given two urgent tasks due at the same time. What do you do?", options: [
+      "Panic and do neither well.",
+      "Quickly check with your manager on which one should come first.",
+      "Guess and hope it works out.",
+      "Do whichever one is more fun."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "How do you stay organized when your to-do list piles up?", options: [
+      "I don't, I just wing it.",
+      "I write everything down and tackle it by priority and deadline.",
+      "I ignore anything that isn't due today.",
+      "I ask someone else to keep track for me."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Your team missed a deadline because of a scheduling mix-up. What now?", options: [
+      "Blame a teammate publicly.",
+      "Own the mistake, fix the timeline, and put a process in place to avoid it again.",
+      "Pretend it didn't happen.",
+      "Quit the project."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "What matters most to you in a first job out of college?", options: [
+      "The shortest possible commute.",
+      "Learning as much as I can and proving I can be trusted with more responsibility.",
+      "Doing the least amount of work possible.",
+      "Free snacks in the break room."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "How would a close friend describe your work ethic?", options: [
+      "Unreliable and easily distracted.",
+      "Reliable — I show up, do the work, and follow through.",
+      "They wouldn't know, I never talk about work.",
+      "Lazy but charming."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "You realize you made a mistake on a project after handing it in. What's the right move?", options: [
+      "Hope nobody notices.",
+      "Tell your manager right away and offer to fix it.",
+      "Wait for someone else to catch it.",
+      "Quietly redo it and pretend it was always right."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "A client is frustrated on a call and raising their voice. What do you do?", options: [
+      "Hang up on them.",
+      "Stay calm, listen, and focus on actually solving their problem.",
+      "Match their tone and argue back.",
+      "Transfer them to someone else without explanation."
     ], correct: 1, category: "behavioral", tier: "easy" }
 ];
 
