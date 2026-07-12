@@ -152,7 +152,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&
 const JOBS = [
   "Finance Analyst", "Accountant", "Corporate Lawyer", "Software Engineer", "Architect",
   "Physician", "Nurse", "Gallery Artist", "Hotel Manager", "Civil Servant",
-  "Research Scientist", "Entrepreneur", "Teacher", "Chef", "Journalist",
+  "Research Scientist", "Teacher", "Chef", "Journalist",
   "Psychologist", "Farmer", "Translator", "Political Aide", "Musician",
 ];
 
@@ -165,13 +165,13 @@ const DEGREES = [
 ];
 
 const DEGREE_QUALIFIES = {
-  "Accounting": ["Accountant"], "Agriculture": ["Farmer", "Entrepreneur"], "Architecture": ["Architect"],
+  "Accounting": ["Accountant"], "Agriculture": ["Farmer"], "Architecture": ["Architect"],
   "Art": ["Gallery Artist"], "Biology": ["Physician", "Research Scientist", "Nurse"],
-  "Business": ["Entrepreneur", "Finance Analyst", "Hotel Manager", "Accountant"],
+  "Business": ["Finance Analyst", "Hotel Manager", "Accountant"],
   "Communications": ["Journalist", "Political Aide"], "Computer Science": ["Software Engineer"],
   "Economics": ["Finance Analyst", "Political Aide"], "Education": ["Teacher"],
   "Engineering": ["Architect", "Software Engineer", "Research Scientist"],
-  "Environmental Science": ["Research Scientist", "Farmer"], "Finance": ["Finance Analyst", "Entrepreneur"],
+  "Environmental Science": ["Research Scientist", "Farmer"], "Finance": ["Finance Analyst"],
   "Fine Arts": ["Gallery Artist", "Musician"], "Health Sciences": ["Physician", "Nurse"],
   "History": ["Teacher", "Civil Servant"], "Hospitality": ["Hotel Manager", "Chef"],
   "Information Technology": ["Software Engineer"], "Journalism": ["Journalist"],
@@ -194,7 +194,6 @@ const JOB_TRACKS = {
   "Hotel Manager": [{ title: "Front Desk Supervisor", salary: 38000 }, { title: "Assistant Hotel Manager", salary: 52000 }, { title: "Hotel Manager", salary: 75000 }],
   "Civil Servant": [{ title: "Junior Civil Servant", salary: 40000 }, { title: "Civil Servant", salary: 55000 }, { title: "Senior Civil Servant", salary: 80000 }],
   "Research Scientist": [{ title: "Research Assistant", salary: 45000 }, { title: "Research Scientist", salary: 75000 }, { title: "Principal Scientist", salary: 115000 }],
-  "Entrepreneur": [{ title: "Startup Founder", salary: 25000 }, { title: "Small Business Owner", salary: 55000 }, { title: "CEO", salary: 140000 }],
   "Teacher": [{ title: "Teaching Assistant", salary: 30000 }, { title: "Teacher", salary: 48000 }, { title: "Senior Teacher", salary: 62000 }],
   "Chef": [{ title: "Line Cook", salary: 30000 }, { title: "Sous Chef", salary: 42000 }, { title: "Head Chef", salary: 68000 }],
   "Journalist": [{ title: "Junior Reporter", salary: 35000 }, { title: "Journalist", salary: 50000 }, { title: "Senior Correspondent", salary: 78000 }],
@@ -281,11 +280,11 @@ const QUESTION_BANK = [
 const COUNTRIES = {
   "United States": { gradingSystem: "gpa", freeCollege: false, parentsPayChance: 0.55, cities: {
     "New York": { state: "New York", bias: { "Finance Analyst": 2.2, "Corporate Lawyer": 1.6, "Architect": 0.5, "Software Engineer": 1.3 }, flavor: "A canyon of glass towers built on money and ambition." },
-    "Los Angeles": { state: "California", bias: { "Gallery Artist": 1.8, "Entrepreneur": 1.5, "Chef": 1.4, "Architect": 1.1 }, flavor: "Sun-bleached sprawl where everyone's got a script in their bag." },
-    "San Francisco": { state: "California", bias: { "Software Engineer": 2.3, "Entrepreneur": 1.8, "Research Scientist": 1.3 }, flavor: "Fog, hills, and a start-up pitch on every corner." },
+    "Los Angeles": { state: "California", bias: { "Gallery Artist": 1.8, "Chef": 1.4, "Architect": 1.1 }, flavor: "Sun-bleached sprawl where everyone's got a script in their bag." },
+    "San Francisco": { state: "California", bias: { "Software Engineer": 2.3, "Research Scientist": 1.3 }, flavor: "Fog, hills, and a start-up pitch on every corner." },
     "Chicago": { state: "Illinois", bias: { "Architect": 2.0, "Civil Servant": 1.4, "Finance Analyst": 1.2 }, flavor: "Broad shoulders, bold skylines, honest winters." },
-    "Houston": { state: "Texas", bias: { "Research Scientist": 1.5, "Entrepreneur": 1.4, "Civil Servant": 1.2 }, flavor: "Big, humid, and quietly running on oil and rockets." },
-    "Miami": { state: "Florida", bias: { "Entrepreneur": 1.7, "Hotel Manager": 1.8, "Finance Analyst": 1.3 }, flavor: "Neon coastline where money likes to be seen." },
+    "Houston": { state: "Texas", bias: { "Research Scientist": 1.5, "Civil Servant": 1.2 }, flavor: "Big, humid, and quietly running on oil and rockets." },
+    "Miami": { state: "Florida", bias: { "Hotel Manager": 1.8, "Finance Analyst": 1.3 }, flavor: "Neon coastline where money likes to be seen." },
     "Seattle": { state: "Washington", bias: { "Software Engineer": 2.0, "Research Scientist": 1.3, "Architect": 1.1 }, flavor: "Rain, coffee, and code humming behind the clouds." },
     "Boston": { state: "Massachusetts", bias: { "Research Scientist": 1.8, "Corporate Lawyer": 1.4, "Teacher": 1.3 }, flavor: "Old brick and older ideas, a city that loves a lecture hall." },
   } },
@@ -297,10 +296,10 @@ const COUNTRIES = {
   "France": { gradingSystem: "twenty", freeCollege: true, parentsPayChance: 0.6, cities: {
     "Paris": { bias: { "Gallery Artist": 1.8, "Corporate Lawyer": 1.3, "Chef": 1.7, "Architect": 1.2 }, flavor: "Boulevards built for arguing about art and eating well." },
     "Lyon": { bias: { "Chef": 2.0, "Research Scientist": 1.3 }, flavor: "The country's kitchen, unbothered by trends." },
-    "Marseille": { bias: { "Chef": 1.5, "Entrepreneur": 1.3, "Hotel Manager": 1.4 }, flavor: "Sun, sea salt, and a port city's restless hustle." },
+    "Marseille": { bias: { "Chef": 1.5, "Hotel Manager": 1.4 }, flavor: "Sun, sea salt, and a port city's restless hustle." },
   } },
   "Germany": { gradingSystem: "german", freeCollege: true, parentsPayChance: 0.65, cities: {
-    "Berlin": { bias: { "Software Engineer": 1.8, "Gallery Artist": 1.4, "Entrepreneur": 1.3 }, flavor: "Concrete, techno, and a start-up scene in the old bones of the city." },
+    "Berlin": { bias: { "Software Engineer": 1.8, "Gallery Artist": 1.4 }, flavor: "Concrete, techno, and a start-up scene in the old bones of the city." },
     "Munich": { bias: { "Architect": 1.5, "Research Scientist": 1.6, "Finance Analyst": 1.2 }, flavor: "Precision engineering with a beer garden attitude." },
     "Frankfurt": { bias: { "Finance Analyst": 2.1, "Corporate Lawyer": 1.5 }, flavor: "Skyscrapers and central banks in an otherwise quiet skyline." },
   } },
@@ -312,32 +311,32 @@ const COUNTRIES = {
   "Spain": { gradingSystem: "percentage", freeCollege: false, parentsPayChance: 0.45, cities: {
     "Madrid": { bias: { "Corporate Lawyer": 1.3, "Chef": 1.4, "Civil Servant": 1.3 }, flavor: "Late dinners and a government that never sleeps either." },
     "Barcelona": { bias: { "Architect": 2.0, "Gallery Artist": 1.5, "Software Engineer": 1.2 }, flavor: "Gaudí's shadow and a coastline full of ideas." },
-    "Valencia": { bias: { "Chef": 1.6, "Architect": 1.3, "Entrepreneur": 1.2 }, flavor: "Orange groves, futuristic architecture, and a slower clock." },
+    "Valencia": { bias: { "Chef": 1.6, "Architect": 1.3 }, flavor: "Orange groves, futuristic architecture, and a slower clock." },
   } },
   "Netherlands": { gradingSystem: "percentage", freeCollege: false, parentsPayChance: 0.55, cities: {
-    "Amsterdam": { bias: { "Software Engineer": 1.6, "Entrepreneur": 1.5, "Architect": 1.3 }, flavor: "Canals, bicycles, and a very practical kind of ambition." },
+    "Amsterdam": { bias: { "Software Engineer": 1.6, "Architect": 1.3 }, flavor: "Canals, bicycles, and a very practical kind of ambition." },
     "Rotterdam": { bias: { "Architect": 1.8, "Civil Servant": 1.3 }, flavor: "Rebuilt from scratch and proud of every bold new angle." },
   } },
   "Canada": { gradingSystem: "gpa", freeCollege: false, parentsPayChance: 0.5, cities: {
     "Toronto": { bias: { "Finance Analyst": 1.6, "Software Engineer": 1.4, "Civil Servant": 1.2 }, flavor: "Politely ambitious, glass towers over a frozen lake." },
-    "Vancouver": { bias: { "Architect": 1.4, "Gallery Artist": 1.3, "Entrepreneur": 1.2 }, flavor: "Mountains, rain, and film crews on every corner." },
+    "Vancouver": { bias: { "Architect": 1.4, "Gallery Artist": 1.3 }, flavor: "Mountains, rain, and film crews on every corner." },
     "Montreal": { bias: { "Gallery Artist": 1.6, "Research Scientist": 1.4, "Chef": 1.3 }, flavor: "Old-world streets with a stubbornly independent culture." },
   } },
   "UAE": { gradingSystem: "switchable", freeCollege: false, parentsPayChance: 0.7, cities: {
-    "Dubai": { bias: { "Finance Analyst": 1.8, "Entrepreneur": 1.9, "Architect": 1.6, "Civil Servant": 1.1 }, flavor: "Built overnight, ambitious by design, tax-free by choice." },
+    "Dubai": { bias: { "Finance Analyst": 1.8, "Architect": 1.6, "Civil Servant": 1.1 }, flavor: "Built overnight, ambitious by design, tax-free by choice." },
     "Abu Dhabi": { bias: { "Civil Servant": 1.7, "Finance Analyst": 1.5, "Research Scientist": 1.3 }, flavor: "Quieter than its neighbor, run on oil money and long-term plans." },
   } },
   "Singapore": { gradingSystem: "switchable", freeCollege: false, parentsPayChance: 0.65, cities: {
     "Singapore": { bias: { "Finance Analyst": 2.0, "Software Engineer": 1.5, "Civil Servant": 1.4 }, flavor: "A city-state run like a very efficient company." },
-    "Sentosa": { bias: { "Hotel Manager": 1.9, "Entrepreneur": 1.3, "Chef": 1.3 }, flavor: "A resort island bolted onto a business capital." },
+    "Sentosa": { bias: { "Hotel Manager": 1.9, "Chef": 1.3 }, flavor: "A resort island bolted onto a business capital." },
   } },
   "Japan": { gradingSystem: "percentage", freeCollege: false, parentsPayChance: 0.55, cities: {
     "Tokyo": { bias: { "Software Engineer": 1.7, "Research Scientist": 1.5, "Corporate Lawyer": 1.2 }, flavor: "Neon order, quiet discipline, trains always on time." },
-    "Osaka": { bias: { "Chef": 1.8, "Entrepreneur": 1.4 }, flavor: "The nation's kitchen with a comedian's sense of humor." },
+    "Osaka": { bias: { "Chef": 1.8 }, flavor: "The nation's kitchen with a comedian's sense of humor." },
     "Kyoto": { bias: { "Gallery Artist": 1.8, "Teacher": 1.3 }, flavor: "Temples and tradition, allergic to hurrying." },
   } },
   "South Korea": { gradingSystem: "percentage", freeCollege: false, parentsPayChance: 0.5, cities: {
-    "Seoul": { bias: { "Software Engineer": 1.7, "Entrepreneur": 1.4, "Gallery Artist": 1.3 }, flavor: "Relentless studying, relentless pop culture." },
+    "Seoul": { bias: { "Software Engineer": 1.7, "Gallery Artist": 1.3 }, flavor: "Relentless studying, relentless pop culture." },
     "Busan": { bias: { "Hotel Manager": 1.5, "Chef": 1.4, "Research Scientist": 1.2 }, flavor: "Port-city energy with beaches instead of skyscrapers." },
   } },
 };
