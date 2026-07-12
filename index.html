@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Sim Finder</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel-2: #1f2438;
+    --accent: #7c9eff;
+    --accent-2: #ffb37c;
+    --text: #e8eaf5;
+    --muted: #9198b8;
+    --border: #2a3050;
+    --good: #7cffb2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1200px 800px at 20% -10%, #1c2140 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .app {
+    width: 100%;
+    max-width: 680px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  header h1 {
+    font-size: 1.7rem;
+    margin: 0 0 6px;
+  }
+  header p {
+    color: var(--muted);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .progress-wrap {
+    height: 6px;
+    background: var(--panel-2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    width: 0%;
+    transition: width 0.35s ease;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .step-label {
+    color: var(--accent);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .question {
+    font-size: 1.25rem;
+    margin: 0 0 20px;
+    line-height: 1.4;
+  }
+  .options {
+    display: grid;
+    gap: 10px;
+  }
+  .option {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  }
+  .option:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .option.selected {
+    border-color: var(--accent);
+    background: #232a4d;
+  }
+  .option .emoji {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+  .option .label {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .option .desc {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+  }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0f1220;
+    font-weight: 700;
+  }
+  button.primary:hover:not(:disabled) {
+    background: #6c8bff;
+  }
+  .result h2 {
+    margin-top: 0;
+    font-size: 1.4rem;
+  }
+  .result .tagline {
+    color: var(--accent-2);
+    font-weight: 600;
+    margin-bottom: 18px;
+  }
+  .result-section {
+    margin-bottom: 16px;
+  }
+  .result-section h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+  .feature-list {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .result-nav {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  #copyStatus {
+    color: var(--good);
+    font-size: 0.85rem;
+    margin-left: 4px;
+    align-self: center;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🎲 Life Sim Finder</h1>
+    <p>Answer a few questions and get a personalized blueprint for the life simulator you should build.</p>
+  </header>
+
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    key: "setting",
+    label: "Setting",
+    question: "What world should the life sim take place in?",
+    options: [
+      { value: "realistic", emoji: "🏙️", label: "Realistic modern life", desc: "Grounded in the real world — school, jobs, relationships, money." },
+      { value: "fantasy", emoji: "🐉", label: "Fantasy / sci-fi", desc: "Magic, spaceships, monsters, or far-future societies." },
+      { value: "historical", emoji: "🏺", label: "Historical era", desc: "A specific period — medieval, Victorian, 1920s, etc." },
+      { value: "absurd", emoji: "🤪", label: "Silly / absurd", desc: "Over-the-top, comedic, anything-goes chaos." }
+    ]
+  },
+  {
+    key: "focus",
+    label: "Core focus",
+    question: "What should the game mostly be about?",
+    options: [
+      { value: "career", emoji: "💼", label: "Career & wealth", desc: "Jobs, promotions, business, building a fortune." },
+      { value: "relationships", emoji: "❤️", label: "Relationships & family", desc: "Friends, romance, marriage, raising kids." },
+      { value: "health", emoji: "🏃", label: "Health & longevity", desc: "Fitness, aging, mental health, living a long life." },
+      { value: "balanced", emoji: "⚖️", label: "A balanced mix", desc: "No single focus — juggle everything at once." }
+    ]
+  },
+  {
+    key: "mechanic",
+    label: "Core loop",
+    question: "How should the player actually interact with the sim?",
+    options: [
+      { value: "random-events", emoji: "🎰", label: "Random events + choices", desc: "BitLife-style: age up, react to random prompts." },
+      { value: "dialogue", emoji: "💬", label: "Dialogue trees & decisions", desc: "Narrative-driven choices that branch the story." },
+      { value: "resource-mgmt", emoji: "📊", label: "Stat & time management", desc: "Sims-style: allocate time/energy across needs each day." },
+      { value: "sandbox", emoji: "🧩", label: "Open sandbox", desc: "Few rules — the player mostly self-directs." }
+    ]
+  },
+  {
+    key: "time",
+    label: "Pacing",
+    question: "What time scale should the sim run on?",
+    options: [
+      { value: "yearly", emoji: "📅", label: "Yearly milestones", desc: "Age up a year at a time, life-stage by life-stage." },
+      { value: "daily", emoji: "🗓️", label: "Daily / weekly cycles", desc: "Finer-grained routines and schedules." },
+      { value: "idle", emoji: "⏳", label: "Real-time / idle", desc: "Time passes even when you're not playing." },
+      { value: "turnless", emoji: "🔀", label: "No fixed clock", desc: "Progress is driven by events, not time." }
+    ]
+  },
+  {
+    key: "presentation",
+    label: "Presentation",
+    question: "What should it look and feel like?",
+    options: [
+      { value: "text", emoji: "📝", label: "Text-only", desc: "Pure text with stat bars — fast to build, easy to expand." },
+      { value: "2d", emoji: "🎨", label: "2D pixel/cartoon art", desc: "Small sprites, portraits, simple animations." },
+      { value: "minimal-ui", emoji: "🔘", label: "Minimalist icon UI", desc: "Clean cards, icons, and charts — no character art." },
+      { value: "3d", emoji: "🧱", label: "3D / isometric world", desc: "A visual world you can see your character move through." }
+    ]
+  },
+  {
+    key: "scope",
+    label: "Scope",
+    question: "How big a project do you want to take on?",
+    options: [
+      { value: "weekend", emoji: "🌱", label: "Weekend prototype", desc: "A small, playable core loop — ship something fast." },
+      { value: "hobby", emoji: "🌿", label: "Ongoing hobby project", desc: "Build depth over weeks/months, iterate on feedback." },
+      { value: "ambitious", emoji: "🌳", label: "Ambitious full game", desc: "Aiming for a polished, feature-rich release." }
+    ]
+  },
+  {
+    key: "platform",
+    label: "Platform",
+    question: "Where should people play it?",
+    options: [
+      { value: "web", emoji: "🌐", label: "Browser web app", desc: "Runs anywhere with a link, no install needed." },
+      { value: "mobile", emoji: "📱", label: "Mobile app", desc: "Native iOS/Android, touch-first." },
+      { value: "desktop", emoji: "🖥️", label: "Desktop app", desc: "Installed app for Windows/Mac/Linux." }
+    ]
+  }
+];
+
+const state = { step: 0, answers: {} };
+
+const card = document.getElementById("card");
+const progressBar = document.getElementById("progressBar");
+
+function render() {
+  if (state.step < QUESTIONS.length) {
+    renderQuestion(QUESTIONS[state.step]);
+  } else {
+    renderResult();
+  }
+  progressBar.style.width = `${(Math.min(state.step, QUESTIONS.length) / QUESTIONS.length) * 100}%`;
+}
+
+function renderQuestion(q) {
+  const selected = state.answers[q.key];
+  card.innerHTML = `
+    <div class="step-label">Step ${state.step + 1} of ${QUESTIONS.length} · ${q.label}</div>
+    <p class="question">${q.question}</p>
+    <div class="options">
+      ${q.options.map(opt => `
+        <div class="option ${selected === opt.value ? "selected" : ""}" data-value="${opt.value}">
+          <span class="emoji">${opt.emoji}</span>
+          <div>
+            <div class="label">${opt.label}</div>
+            <div class="desc">${opt.desc}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+    <div class="nav">
+      <button id="backBtn" ${state.step === 0 ? "disabled" : ""}>Back</button>
+      <button id="nextBtn" class="primary" ${selected ? "" : "disabled"}>
+        ${state.step === QUESTIONS.length - 1 ? "See my blueprint" : "Next"}
+      </button>
+    </div>
+  `;
+
+  card.querySelectorAll(".option").forEach(el => {
+    el.addEventListener("click", () => {
+      state.answers[q.key] = el.dataset.value;
+      render();
+    });
+  });
+  document.getElementById("backBtn").addEventListener("click", () => {
+    state.step = Math.max(0, state.step - 1);
+    render();
+  });
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    if (!state.answers[q.key]) return;
+    state.step += 1;
+    render();
+  });
+}
+
+const SETTING_LABELS = { realistic: "Realistic modern life", fantasy: "Fantasy / sci-fi", historical: "Historical era", absurd: "Silly / absurd" };
+const FOCUS_LABELS = { career: "career & wealth", relationships: "relationships & family", health: "health & longevity", balanced: "a balanced mix of everything" };
+const MECHANIC_LABELS = { "random-events": "random events with reactive choices", dialogue: "branching dialogue & decisions", "resource-mgmt": "stat and time-management", sandbox: "an open sandbox" };
+const TIME_LABELS = { yearly: "yearly age-up milestones", daily: "daily/weekly cycles", idle: "real-time idle progression", turnless: "event-driven, no fixed clock" };
+const PRESENTATION_LABELS = { text: "text-only with stat bars", "2d": "2D pixel/cartoon art", "minimal-ui": "a minimalist icon-driven UI", "3d": "a 3D/isometric world" };
+const SCOPE_LABELS = { weekend: "a weekend prototype", hobby: "an ongoing hobby project", ambitious: "an ambitious full release" };
+const PLATFORM_LABELS = { web: "the browser", mobile: "mobile", desktop: "desktop" };
+
+function buildName(a) {
+  const settingWord = { realistic: "Real", fantasy: "Mythic", historical: "Vintage", absurd: "Wacky" }[a.setting];
+  const focusWord = { career: "Hustle", relationships: "Bonds", health: "Vitality", balanced: "Life" }[a.focus];
+  return `${settingWord} ${focusWord}`;
+}
+
+function techStackFor(a) {
+  const stack = [];
+  if (a.platform === "web") {
+    stack.push(a.scope === "weekend" ? "Vanilla HTML/CSS/JS (single page)" : "React or Svelte + a lightweight state store");
+  } else if (a.platform === "mobile") {
+    stack.push("React Native or Flutter");
+  } else {
+    stack.push("Electron or Tauri, or a native toolkit (Swift/WinUI)");
+  }
+  if (a.presentation === "2d") stack.push("A 2D framework (Phaser, or CSS sprite sheets)");
+  if (a.presentation === "3d") stack.push("Three.js or a game engine (Godot/Unity)");
+  if (a.mechanic === "resource-mgmt" || a.focus === "balanced") stack.push("A simple state machine to track stats each tick");
+  if (a.time === "idle") stack.push("A background timer/service worker for offline progress");
+  stack.push("localStorage or a small DB for save data");
+  return stack;
+}
+
+function featuresFor(a) {
+  const features = [];
+  features.push(`Character creation screen (name, starting background based on a ${SETTING_LABELS[a.setting].toLowerCase()} setting)`);
+  if (a.focus === "career") features.push("Job market with promotions, salary growth, and career-ending events");
+  if (a.focus === "relationships") features.push("Relationship system with friends, romance, marriage, and children");
+  if (a.focus === "health") features.push("Health/energy/mental-health meters that respond to lifestyle choices");
+  if (a.focus === "balanced") features.push("A dashboard of core stats (money, health, relationships, happiness) all evolving together");
+  if (a.mechanic === "random-events") features.push("A large pool of random life events with branching outcomes");
+  if (a.mechanic === "dialogue") features.push("Branching dialogue trees with consequences that persist");
+  if (a.mechanic === "resource-mgmt") features.push("A daily/weekly schedule where you allocate limited time across activities");
+  if (a.mechanic === "sandbox") features.push("Minimal scripted content — emergent systems the player combines freely");
+  if (a.time === "yearly") features.push('An "Age Up" button that advances a year and resolves that year\'s events');
+  if (a.time === "idle") features.push("Passive progression that continues between sessions");
+  features.push(`${a.scope === "weekend" ? "A tight, single-screen" : "A multi-screen"} UI in ${PRESENTATION_LABELS[a.presentation]}`);
+  features.push(a.scope === "ambitious" ? "Achievements, multiple endings, and replayable seeds" : "A simple end-of-life summary screen");
+  return features;
+}
+
+function renderResult() {
+  const a = state.answers;
+  const name = buildName(a);
+  const stack = techStackFor(a);
+  const features = featuresFor(a);
+
+  card.innerHTML = `
+    <div class="result">
+      <div class="step-label">Your blueprint</div>
+      <h2>${name}</h2>
+      <p class="tagline">A ${SCOPE_LABELS[a.scope]} life simulator, built for ${PLATFORM_LABELS[a.platform]}.</p>
+
+      <div class="result-section">
+        <h3>Concept</h3>
+        <p>Set in a <strong>${SETTING_LABELS[a.setting].toLowerCase()}</strong> world, centered on <strong>${FOCUS_LABELS[a.focus]}</strong>,
+        driven by <strong>${MECHANIC_LABELS[a.mechanic]}</strong>, paced by <strong>${TIME_LABELS[a.time]}</strong>,
+        presented with <strong>${PRESENTATION_LABELS[a.presentation]}</strong>.</p>
+      </div>
+
+      <div class="result-section">
+        <h3>Your answers</h3>
+        <div class="chip-row">
+          ${QUESTIONS.map(q => `<span class="chip">${q.options.find(o => o.value === a[q.key]).emoji} ${q.options.find(o => o.value === a[q.key]).label}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="result-section">
+        <h3>Suggested features</h3>
+        <ul class="feature-list">
+          ${features.map(f => `<li>${f}</li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="result-section">
+        <h3>Suggested tech stack</h3>
+        <div class="chip-row">
+          ${stack.map(s => `<span class="chip">${s}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="result-nav">
+        <button id="restartBtn">Start over</button>
+        <button id="copyBtn" class="primary">Copy blueprint</button>
+        <span id="copyStatus"></span>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("restartBtn").addEventListener("click", () => {
+    state.step = 0;
+    state.answers = {};
+    render();
+  });
+  document.getElementById("copyBtn").addEventListener("click", async () => {
+    const text = [
+      `${name} — a ${SCOPE_LABELS[a.scope]} life simulator for ${PLATFORM_LABELS[a.platform]}`,
+      "",
+      `Setting: ${SETTING_LABELS[a.setting]}`,
+      `Focus: ${FOCUS_LABELS[a.focus]}`,
+      `Core loop: ${MECHANIC_LABELS[a.mechanic]}`,
+      `Pacing: ${TIME_LABELS[a.time]}`,
+      `Presentation: ${PRESENTATION_LABELS[a.presentation]}`,
+      "",
+      "Suggested features:",
+      ...features.map(f => `- ${f}`),
+      "",
+      "Suggested tech stack:",
+      ...stack.map(s => `- ${s}`)
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      document.getElementById("copyStatus").textContent = "Copied!";
+    } catch (e) {
+      document.getElementById("copyStatus").textContent = "Copy failed — select manually.";
+    }
+  });
+}
+
+render();
+</script>
+</body>
+</html>
