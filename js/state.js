@@ -53,6 +53,7 @@ function newGame(name) {
 
   Object.assign(STATE, {
     name: name || "Alex Ward",
+    uiMode: "desktop",
     ageYears: 22,
     ageWeeks: 0,
     totalWeeks: 0,
@@ -66,8 +67,8 @@ function newGame(name) {
     loanMissedPayments: 0,
     weeksSinceLoanBill: 0,
 
-    energy: 100,
-    maxEnergy: 100,
+    energy: 150,
+    maxEnergy: 150,
     stress: 20,
     happiness: 55,
     reputation: 0,

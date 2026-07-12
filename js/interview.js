@@ -4,21 +4,48 @@
 
 const INTERVIEW = {};
 
+const IV_TIMER_SECONDS = 30;
+const IV_QUESTION_COUNT = 5;
+const DEFAULT_IV_WEIGHTS = { easy: 0.45, medium: 0.35, hard: 0.20 };
+
+function pickInterviewQuestions(weights, count) {
+  const byTier = { easy: [], medium: [], hard: [] };
+  DATA.INTERVIEW_QUESTIONS.forEach(q => byTier[q.tier || "medium"].push(q));
+  Object.keys(byTier).forEach(t => {
+    const arr = byTier[t];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  });
+  const tiers = ["easy", "medium", "hard"];
+  const picks = [];
+  for (let i = 0; i < count; i++) {
+    const r = Math.random();
+    let cum = 0, chosen = tiers[0];
+    for (const t of tiers) {
+      cum += weights[t] || 0;
+      if (r <= cum) { chosen = t; break; }
+    }
+    let q = byTier[chosen].pop();
+    if (!q) {
+      for (const t2 of tiers) { if (byTier[t2].length) { q = byTier[t2].pop(); break; } }
+    }
+    if (q) picks.push(q);
+  }
+  return picks;
+}
+
 INTERVIEW.start = function (firmId, track, onDone) {
   const firm = DATA.FIRMS.find(f => f.id === firmId);
-  const pool = DATA.INTERVIEW_QUESTIONS.slice();
-  // Fisher-Yates shuffle, take 6
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = randInt(0, i);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  const questions = pool.slice(0, 6);
+  const weights = firm.interviewWeights || DEFAULT_IV_WEIGHTS;
+  const questions = pickInterviewQuestions(weights, IV_QUESTION_COUNT);
   let idx = 0, correct = 0;
 
   function nextQuestion() {
     if (idx >= questions.length) return finish();
     const q = questions[idx];
-    let timeLeft = 20;
+    let timeLeft = IV_TIMER_SECONDS;
     let timer = null;
     openModalHTML(`
       <div class="modal-box interview-box">
@@ -47,7 +74,7 @@ INTERVIEW.start = function (firmId, track, onDone) {
     timer = setInterval(() => {
       timeLeft -= 0.2;
       const fill = document.getElementById("iv-timer");
-      if (fill) fill.style.width = clamp(timeLeft / 20 * 100, 0, 100) + "%";
+      if (fill) fill.style.width = clamp(timeLeft / IV_TIMER_SECONDS * 100, 0, 100) + "%";
       if (timeLeft <= 0) answer(false);
     }, 200);
   }

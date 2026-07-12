@@ -16,10 +16,22 @@ UI.toast = function (msg, isError) {
 
 UI.setTab = function (tab) { UI.activeTab = tab; UI.renderAll(); };
 
+UI.applyUIMode = function () {
+  const mobile = STATE.uiMode === "mobile";
+  document.documentElement.classList.toggle("ui-mobile", mobile);
+};
+
+UI.toggleUIMode = function () {
+  STATE.uiMode = STATE.uiMode === "mobile" ? "desktop" : "mobile";
+  save();
+  UI.renderAll();
+};
+
 /* ---------------- Master render ---------------- */
 
 UI.renderAll = function () {
   if (!STATE.characterCreated) { UI.showCharacterCreation(); return; }
+  UI.applyUIMode();
   clearModal();
   if (!STATE.apartmentId) { UI.showApartmentGate(); }
   UI.renderHeader();
@@ -44,6 +56,7 @@ UI.renderHeader = function () {
       <div class="hdr-name">${STATE.name}</div>
       <div class="hdr-age">Age ${ageString()} · Career Year ${year}, Week ${week}</div>
       <div class="hdr-status">${statusLine}</div>
+      <button class="layout-toggle" onclick="UI.toggleUIMode()" title="Switch layout" aria-label="Switch layout">${STATE.uiMode === "mobile" ? "🖥️" : "📱"}</button>
     </div>
     <div class="hdr-row2">
       <div class="chip">Cash <b>${fmtMoney(STATE.cash)}</b></div>
@@ -52,7 +65,7 @@ UI.renderHeader = function () {
       <div class="chip">Net Worth <b class="${netWorth() >= 0 ? "pos" : "neg"}">${fmtMoney(netWorth())}</b></div>
     </div>
     <div class="hdr-bars">
-      <div class="bar-wrap"><span>Energy</span><div class="bar"><div class="bar-fill energy" style="width:${STATE.energy}%"></div></div></div>
+      <div class="bar-wrap"><span>Energy ${Math.round(STATE.energy)}/${STATE.maxEnergy}</span><div class="bar"><div class="bar-fill energy" style="width:${clamp(STATE.energy / STATE.maxEnergy * 100, 0, 100)}%"></div></div></div>
       <div class="bar-wrap"><span>Stress</span><div class="bar"><div class="bar-fill stress" style="width:${STATE.stress}%"></div></div></div>
       <div class="bar-wrap"><span>Happiness</span><div class="bar"><div class="bar-fill happy" style="width:${STATE.happiness}%"></div></div></div>
       <div class="bar-wrap"><span>Reputation</span><div class="bar"><div class="bar-fill rep" style="width:${clamp(STATE.reputation + 20, 0, 100)}%"></div></div></div>
@@ -217,8 +230,8 @@ UI.firmCardHTML = function (f) {
 };
 
 UI.applyToFirm = function (firmId, track) {
-  if (!hasEnergy(20)) { UI.toast("Too exhausted for an interview right now.", true); return; }
-  spendEnergy(20);
+  if (!hasEnergy(12)) { UI.toast("Too exhausted for an interview right now.", true); return; }
+  spendEnergy(12);
   save();
   INTERVIEW.start(firmId, track, () => UI.renderAll());
 };
@@ -454,6 +467,7 @@ UI.endWeek = function () {
 /* ---------------- Character creation ---------------- */
 
 UI.showCharacterCreation = function () {
+  let chosenMode = (window.matchMedia && window.matchMedia("(max-width: 700px)").matches) ? "mobile" : "desktop";
   openModalHTML(`
     <div class="modal-box">
       <h2>Welcome to Wall Street</h2>
@@ -461,14 +475,28 @@ UI.showCharacterCreation = function () {
       <p>Your goal: become the greatest investment banker who ever lived.</p>
       <label class="field-label">Your name</label>
       <input type="text" id="char-name" class="num-input" placeholder="Alex Ward" value="Alex Ward">
+      <label class="field-label">Choose your layout</label>
+      <div class="layout-choice">
+        <button class="layout-btn" id="mode-desktop" data-mode="desktop">🖥️ Desktop</button>
+        <button class="layout-btn" id="mode-mobile" data-mode="mobile">📱 Mobile</button>
+      </div>
+      <p class="muted">You can switch anytime from the icon in the header.</p>
       <button class="btn btn-primary" id="char-start">Begin Your Career</button>
     </div>
   `);
+  const modeButtons = [el("mode-desktop"), el("mode-mobile")];
+  function refreshModeButtons() {
+    modeButtons.forEach(b => b.classList.toggle("active", b.dataset.mode === chosenMode));
+  }
+  modeButtons.forEach(b => { b.onclick = () => { chosenMode = b.dataset.mode; refreshModeButtons(); }; });
+  refreshModeButtons();
+
   el("char-start").onclick = () => {
     const name = el("char-name").value.trim() || "Alex Ward";
     STATE.characterCreated = true;
     newGame(name);
     STATE.characterCreated = true;
+    STATE.uiMode = chosenMode;
     save();
     UI.renderAll();
   };

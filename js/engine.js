@@ -253,9 +253,9 @@ ENGINE.goOnDate = function (id) {
   if (!c) return { ok: false };
   const cost = 70;
   if (!canAfford(cost)) return { ok: false, msg: "You can't afford a date right now." };
-  if (!hasEnergy(20)) return { ok: false, msg: "Too exhausted for a date tonight." };
+  if (!hasEnergy(14)) return { ok: false, msg: "Too exhausted for a date tonight." };
   spend(cost);
-  spendEnergy(20);
+  spendEnergy(14);
   c.status = "dating";
   const commBonus = Math.round(STATE.skills.communication / 15);
   const salesBonus = Math.round(STATE.skills.sales / 20);
@@ -314,12 +314,12 @@ ENGINE.propose = function () {
 
 ENGINE.resolveInterview = function (firmId, track, scorePct) {
   const firm = DATA.FIRMS.find(f => f.id === firmId);
-  const commBoost = STATE.skills.communication / 400; // up to +0.25
-  const finalScore = clamp(scorePct + commBoost, 0, 1);
+  const commBoost = STATE.skills.communication / 250; // up to +0.4
+  const finalScore = clamp(scorePct + commBoost + 0.12, 0, 1); // +0.12 base courtesy cushion
   let outcome;
-  if (finalScore >= 0.75) outcome = "strong";
-  else if (finalScore >= 0.5) outcome = "pass";
-  else if (finalScore >= 0.3) outcome = "borderline";
+  if (finalScore >= 0.7) outcome = "strong";
+  else if (finalScore >= 0.42) outcome = "pass";
+  else if (finalScore >= 0.22) outcome = "borderline";
   else outcome = "reject";
 
   if (outcome === "reject") {
@@ -328,7 +328,7 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
     save();
     return { hired: false, outcome };
   }
-  if (outcome === "borderline" && Math.random() < 0.5) {
+  if (outcome === "borderline" && Math.random() < 0.3) {
     logEvent(`${firm.name} put you on the waitlist. Not this time.`);
     addStress(3);
     save();
@@ -570,7 +570,7 @@ ENGINE.finishWeek = function (perfScore) {
   maybeRandomEvent();
 
   // Energy & stress natural drift (weekend recovery)
-  STATE.energy = clamp(STATE.energy + 45, 0, STATE.maxEnergy);
+  STATE.energy = clamp(STATE.energy + 100, 0, STATE.maxEnergy);
   if (STATE.stress > 60) addHappiness(-2);
   addStress(STATE.happiness > 55 ? -3 : 1);
   if (STATE.debt > 0) addStress(1);

@@ -47,7 +47,7 @@ function genQ_wacc() {
   const cod = randInt(4, 8);
   const weq = randInt(40, 70);
   const wacc = Math.round((coe * weq + cod * (100 - weq)) / 100);
-  const opts = shuffleOptions(wacc, [wacc - 2, wacc + 2, wacc + 4]);
+  const opts = shuffleOptions(wacc, [wacc - 4, wacc + 4, wacc + 8]);
   return {
     text: `Cost of equity ${coe}%, after-tax cost of debt ${cod}%, equity is ${weq}% of capital. Approx. WACC?`,
     options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + "%"
@@ -77,7 +77,23 @@ function shuffleOptions(correctVal, distractors) {
   return { options: vals, correctIndex: vals.indexOf(correctVal) };
 }
 
-const CRUNCH_GENERATORS = [genQ_multiple, genQ_growth, genQ_wacc, genQ_eps];
+const CRUNCH_EASY_GENERATORS = [genQ_growth, genQ_multiple];
+const CRUNCH_HARD_GENERATORS = [genQ_wacc, genQ_eps];
+const MODEL_CRUNCH_TIMER_SECONDS = 20;
+
+function crunchDifficultyWeights() {
+  if (!STATE.employment) return { easy: 0.6, hard: 0.4 }; // MBA study / unemployed practice
+  const s = titleSeniorityLabel();
+  if (s === "Analyst") return { easy: 0.75, hard: 0.25 };
+  if (s === "Associate") return { easy: 0.5, hard: 0.5 };
+  return { easy: 0.3, hard: 0.7 }; // VP+
+}
+
+function pickCrunchGenerator() {
+  const w = crunchDifficultyWeights();
+  const pool = Math.random() < w.easy ? CRUNCH_EASY_GENERATORS : CRUNCH_HARD_GENERATORS;
+  return pickRandom(pool);
+}
 
 /* ---------------- Model Crunch minigame ---------------- */
 
@@ -88,9 +104,9 @@ function launchModelCrunch(title, onDone) {
 
   function nextQuestion() {
     if (idx >= TOTAL) return finish();
-    const gen = pickRandom(CRUNCH_GENERATORS);
+    const gen = pickCrunchGenerator();
     const q = gen();
-    let timeLeft = 12;
+    let timeLeft = MODEL_CRUNCH_TIMER_SECONDS;
     openModalHTML(`
       <div class="modal-box minigame-box">
         <div class="minigame-header">${title} <span class="minigame-progress">Question ${idx + 1}/${TOTAL}</span></div>
@@ -118,7 +134,7 @@ function launchModelCrunch(title, onDone) {
     timer = setInterval(() => {
       timeLeft -= 0.2;
       const fill = document.getElementById("mg-timer");
-      if (fill) fill.style.width = clamp(timeLeft / 12 * 100, 0, 100) + "%";
+      if (fill) fill.style.width = clamp(timeLeft / MODEL_CRUNCH_TIMER_SECONDS * 100, 0, 100) + "%";
       if (timeLeft <= 0) { answer(false); }
     }, 200);
   }
@@ -126,10 +142,10 @@ function launchModelCrunch(title, onDone) {
   function finish() {
     clearModal();
     const raw = correct / TOTAL;
-    const energyFactor = clamp(0.6 + startEnergy / 250, 0.6, 1.15);
-    const disciplineNudge = (STATE.skills.discipline - 50) / 400;
-    const score = clamp(raw * energyFactor + disciplineNudge, 0, 1);
-    spendEnergy(30);
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
     onDone(score, raw, correct, TOTAL);
   }
 
@@ -172,18 +188,18 @@ function launchReflex(title, onDone) {
         clearTimeout(earlyTimer);
         box.classList.add("early");
         box.textContent = "Too early!";
-        scores.push(0.1);
+        scores.push(0.2);
         setTimeout(nextRound, 500);
         return;
       }
       resolved = true;
       const rt = performance.now() - goTime;
       let s;
-      if (rt <= 280) s = 1.0;
-      else if (rt <= 420) s = 0.85;
-      else if (rt <= 600) s = 0.65;
-      else if (rt <= 900) s = 0.45;
-      else s = 0.25;
+      if (rt <= 350) s = 1.0;
+      else if (rt <= 520) s = 0.85;
+      else if (rt <= 750) s = 0.68;
+      else if (rt <= 1100) s = 0.5;
+      else s = 0.35;
       box.textContent = Math.round(rt) + " ms";
       scores.push(s);
       setTimeout(nextRound, 450);
@@ -193,10 +209,10 @@ function launchReflex(title, onDone) {
   function finish() {
     clearModal();
     const raw = scores.reduce((a, b) => a + b, 0) / scores.length;
-    const energyFactor = clamp(0.6 + startEnergy / 250, 0.6, 1.15);
-    const disciplineNudge = (STATE.skills.discipline - 50) / 400;
-    const score = clamp(raw * energyFactor + disciplineNudge, 0, 1);
-    spendEnergy(30);
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
     onDone(score, raw);
   }
 
