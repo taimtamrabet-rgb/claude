@@ -202,6 +202,11 @@ const CAR_LICENSE_AGE = {
   "Spain": 18, "Netherlands": 18, "Canada": 16, "UAE": 18, "Singapore": 18, "Japan": 18, "South Korea": 18,
 };
 
+const DROPOUT_AGE = {
+  "United States": 16, "United Kingdom": 16, "France": 16, "Germany": 15, "Italy": 16,
+  "Spain": 16, "Netherlands": 16, "Canada": 16, "UAE": 15, "Singapore": 15, "Japan": 15, "South Korea": 16,
+};
+
 const PETS = [
   { name: "Dog", cost: 800, happiness: 3 }, { name: "Cat", cost: 500, happiness: 2 },
   { name: "Bird", cost: 200, happiness: 1 }, { name: "Fish Tank", cost: 100, happiness: 1 },
@@ -406,7 +411,11 @@ const TEAM_POOLS = {
   "American Football": ["Charlotte Barons", "Indianapolis Sentinels", "St. Louis Gladiators", "Buffalo Blizzard", "San Diego Mariners", "Cincinnati Foundry", "Tampa Bay Corsairs", "Minneapolis Timberwolves"],
 };
 const DRAFT_ROUNDS = { "Basketball": 2, "Baseball": 10, "American Football": 7 };
-const TOURNAMENT_ROUNDS = ["Regional Round", "Sectional Final", "State Championship"];
+const TOURNAMENT_TIERS = {
+  Regional: { label: "Regional Tournament", rounds: ["Regional Round", "Regional Final"], minRank: null, chanceMod: 0 },
+  State: { label: "State Tournament", rounds: ["State Quarterfinal", "State Semifinal", "State Championship"], minRank: 75, chanceMod: -0.05 },
+  National: { label: "National Tournament", rounds: ["National Round", "National Semifinal", "National Championship"], minRank: 30, chanceMod: -0.1 },
+};
 const MARCH_MADNESS_ROUNDS = ["First Round", "Second Round", "Sweet 16", "Elite Eight", "Final Four", "Championship"];
 
 /* ============================== EVENTS ============================== */
@@ -439,7 +448,7 @@ const EVENTS = [
   mk("graduation", 18, 18, (c) => `Graduation day has arrived. The next chapter of ${c.first}'s life is unwritten.`, [
     { label: "Go to college", needsDegree: true, apply: (c) => { c.path = "college"; c.log("Graduated high school and enrolled in college."); } },
     { label: "Start working right away", apply: (c) => { c.path = "work"; c.log("Graduated high school and went straight to work."); } },
-  ], { once: true, guaranteed: true }),
+  ], { once: true, guaranteed: true, condition: (c) => !c.droppedOutSchool }),
   mk("college_life", 19, 21, (c) => `College life is in full swing.`, [
     { label: "Bury yourself in studying", apply: (c) => (c.smarts += 2, c.gradeRaw = clamp100(c.gradeRaw + 5), c.happiness -= 1, c.log("Buried yourself in coursework.")) },
     { label: "Get involved on campus", apply: (c) => (c.happiness += 2, c.look += 1, c.log("Got involved in campus life, made friends easily.")) },
@@ -738,13 +747,41 @@ function workHarder() {
 
 function cycleGender() { const c = ctx; const idx = GENDERS.indexOf(c.gender); c.gender = GENDERS[(idx + 1) % GENDERS.length]; render(); }
 
+function quitJob() {
+  const c = ctx;
+  if (!c.job) return;
+  c.log(`Quit your job as a ${c.job}.`);
+  c.job = null; c.jobBase = null; c.jobTier = 0; c.salary = 0; c.jobPerformance = 50; c.proSport = null;
+  render();
+}
+function dropoutAgeFor() { return DROPOUT_AGE[character.country] || 16; }
+function dropOutOfSchool() {
+  const c = ctx;
+  if (c.path === "college" || age < dropoutAgeFor()) return;
+  c.path = "work"; c.droppedOutSchool = true; c.gradNotified = true;
+  c.happiness -= 2;
+  c.log(`Dropped out of school at ${age}, the legal age to leave school in ${character.country}.`);
+  syncStats();
+  render();
+}
+function dropOutOfCollege() {
+  const c = ctx;
+  if (c.path !== "college" || c.uniGraduated) return;
+  c.path = "work"; c.gradNotified = true;
+  c.happiness -= 2;
+  c.log(`Dropped out of college${c.degree ? ` (${c.degree})` : ""} without finishing the degree.`);
+  syncStats();
+  render();
+}
+
 /* ---- school sports: tryouts, tournaments, march madness ---- */
 function openTryoutFlow() { activeFlow = { type: "tryout", step: "pick" }; render(); }
 function chooseSport(sport) {
   const c = ctx;
+  const autoIn = c.talent === "sports" && age < 18;
   const chance = 0.3 + (c.athleticism - 5) * 0.08 + (c.health - 5) * 0.02;
-  const passed = Math.random() < chance;
-  activeFlow = { type: "tryout", step: "result", sport, passed };
+  const passed = autoIn ? true : Math.random() < chance;
+  activeFlow = { type: "tryout", step: "result", sport, passed, autoIn };
   render();
 }
 function finishTryout() {
@@ -753,7 +790,7 @@ function finishTryout() {
     c.madeTeam = activeFlow.sport;
     c.sportPerformance = clamp100(30 + c.athleticism * 5);
     c.happiness += 3; c.health += 1;
-    c.log(`Made the ${activeFlow.sport} team — became a name people knew.`);
+    c.log(activeFlow.autoIn ? `Your natural athletic talent put you straight onto the ${activeFlow.sport} team.` : `Made the ${activeFlow.sport} team — became a name people knew.`);
     updateTeamRank();
   } else {
     c.happiness -= 1;
@@ -763,31 +800,52 @@ function finishTryout() {
   activeFlow = null;
   render();
 }
+function quitTeam() {
+  const c = ctx;
+  if (!c.madeTeam) return;
+  c.log(`Quit the ${c.madeTeam} team.`);
+  c.madeTeam = null; c.sportPerformance = 30; c.teamRank = null;
+  c.happiness -= 1;
+  syncStats();
+  render();
+}
 
 function openTournamentFlow() {
   if (ctx.tournamentUsesThisYear >= 1 || ctx.madeTeam !== "Basketball") return;
-  activeFlow = { type: "tournament", roundIndex: 0, done: false };
+  activeFlow = { type: "tournament", step: "pick" };
+  render();
+}
+function tournamentTierAvailable(tier) {
+  const req = TOURNAMENT_TIERS[tier].minRank;
+  if (!req) return true;
+  return !!ctx.teamRank && ctx.teamRank <= req;
+}
+function pickTournamentTier(tier) {
+  if (!tournamentTierAvailable(tier)) return;
+  activeFlow = { type: "tournament", step: "play", tier, roundIndex: 0, done: false };
   render();
 }
 function playTournamentRound() {
   const c = ctx; const f = activeFlow;
-  const chance = clamp01(0.45 + (c.sportPerformance - 50) / 200 + (c.athleticism - 5) * 0.03);
+  const tierInfo = TOURNAMENT_TIERS[f.tier];
+  const rounds = tierInfo.rounds;
+  const chance = clamp01(0.45 + tierInfo.chanceMod + (c.sportPerformance - 50) / 200 + (c.athleticism - 5) * 0.03);
   const win = Math.random() < chance;
   c.tournamentUsesThisYear = 1;
   if (win) {
     c.sportPerformance = clamp100(c.sportPerformance + 3);
-    if (f.roundIndex === TOURNAMENT_ROUNDS.length - 1) {
+    if (f.roundIndex === rounds.length - 1) {
       f.done = true; f.champion = true;
-      c.trophies.push(`${schoolStage(age)} Basketball Champion (age ${age})`);
+      c.trophies.push(`${schoolStage(age)} ${tierInfo.label} Champion (age ${age})`);
       c.happiness = clampStat(c.happiness + 2);
-      c.log(`Won the ${TOURNAMENT_ROUNDS[f.roundIndex]} and the school championship!`);
+      c.log(`Won the ${rounds[f.roundIndex]} — ${tierInfo.label} champions!`);
     } else {
-      c.log(`Won the ${TOURNAMENT_ROUNDS[f.roundIndex]}, advancing to ${TOURNAMENT_ROUNDS[f.roundIndex + 1]}.`);
+      c.log(`Won the ${rounds[f.roundIndex]}, advancing to ${rounds[f.roundIndex + 1]}.`);
       f.roundIndex += 1;
     }
   } else {
     f.done = true; f.champion = false;
-    c.log(`Lost in the ${TOURNAMENT_ROUNDS[f.roundIndex]} of the school tournament.`);
+    c.log(`Lost in the ${rounds[f.roundIndex]} of the ${tierInfo.label}.`);
   }
   updateTeamRank();
   syncStats();
@@ -1214,7 +1272,7 @@ function renderGameShell() {
 
 function renderDashboardBody() {
   const c = ctx;
-  const inSchool = age < 18 || (c.path === "college" && age < 22);
+  const inSchool = (age < 18 && !c.droppedOutSchool) || (c.path === "college" && age < 22);
   const occLabel = c.job ? "Job" : inSchool ? "School" : "Occupation";
   const occSub = c.job ? c.job : inSchool ? (c.path === "college" ? "College student" : schoolStage(age)) : "Unemployed";
   const tiles = [
@@ -1246,7 +1304,7 @@ function renderSubPage() {
 function pageOccupation() {
   const c = ctx;
   const a = age;
-  const inSchool = a < 18 || (c.path === "college" && a < 22);
+  const inSchool = (a < 18 && !c.droppedOutSchool) || (c.path === "college" && a < 22);
   const gradeSystem = effectiveGradingSystem(character.country, c.curriculum);
   let html = `<p class="page-title">Occupation</p>`;
 
@@ -1258,16 +1316,20 @@ function pageOccupation() {
     html += rowHTML("📖", "Grades", convertGrade(c.gradeRaw, gradeSystem));
     html += rowBtnHTML("📖", "Study Harder", c.studyUsesThisYear >= 1 ? "Used for this year" : "Once a year", "openSubject", null, c.studyUsesThisYear >= 1);
     if (a >= 14 && a < 18) html += rowBtnHTML("💼", "Part-Time Job", c.partTimeUsesThisYear >= 2 ? "Used up for this year" : `${2 - c.partTimeUsesThisYear} left this year`, "openPartTime", null, c.partTimeUsesThisYear >= 2);
-    if (a < 18) {
+
+    if (a < 11) {
+      html += rowHTML("🏀", "Sports Clubs", "Open starting in middle school (age 11)");
+    } else if (a < 18) {
       if (c.madeTeam) html += rowHTML("🏀", "Team", `On the ${c.madeTeam} team`);
       else html += rowBtnHTML("🏀", "Try Out for a Team", "Pick a sport", "openTryout");
     }
+
     if (c.madeTeam) {
       html += `<div class="section-label">Sports Performance</div>` + perfBarHTML("Performance", c.sportPerformance);
-      html += rowHTML("🏆", "Team Rank", c.teamRank ? `#${c.teamRank} regionally` : "Unranked");
+      html += rowHTML("🏆", "Team Rank", c.teamRank ? `#${c.teamRank} nationally` : "Unranked");
       html += rowBtnHTML("📈", "Train Harder", c.trainUsesThisYear >= 1 ? "Used for this year" : "Once a year", "trainHarder", null, c.trainUsesThisYear >= 1);
       if (c.madeTeam === "Basketball" && a < 18) {
-        html += rowBtnHTML("🏆", "Enter Tournament", c.tournamentUsesThisYear >= 1 ? "Used for this year" : "Once a year — single elimination", "openTournament", null, c.tournamentUsesThisYear >= 1);
+        html += rowBtnHTML("🏆", "Enter Tournament", c.tournamentUsesThisYear >= 1 ? "Used for this year" : "Once a year — regional, state, or national", "openTournament", null, c.tournamentUsesThisYear >= 1);
       }
       if (c.madeTeam === "Basketball" && c.path === "college") {
         if (c.teamRank && c.teamRank <= 30) html += rowBtnHTML("🏆", "Enter March Madness", c.marchMadnessUsesThisYear >= 1 ? "Used for this year" : "Once a year — top-30 team", "openMarchMadness", null, c.marchMadnessUsesThisYear >= 1);
@@ -1276,6 +1338,13 @@ function pageOccupation() {
       if (c.path === "college" && c.madeTeam === "American Football") html += rowHTML("🏈", "College Football", `${c.collegeFootballYears}/4 seasons played`);
       const de = draftEligible(c, a);
       if (de) html += rowBtnHTML("📋", de.early ? "Declare Early for Draft" : "Declare for Draft", "Try to go pro", "declareDraft", de.sport + "|" + (de.early ? "1" : "0"));
+      html += rowBtnHTML("🚪", "Quit Team", "Leave the club", "quitTeam");
+    }
+
+    if (c.path === "college") {
+      html += rowBtnHTML("🚪", "Drop Out of College", "Leave without finishing the degree", "dropOutOfCollege");
+    } else if (a >= dropoutAgeFor()) {
+      html += rowBtnHTML("🚪", "Drop Out of School", `Legal at age ${dropoutAgeFor()} in ${character.country}`, "dropOutOfSchool");
     }
   }
 
@@ -1291,6 +1360,7 @@ function pageOccupation() {
     html += rowHTML("💼", c.job, `${formatMoney(c.salary, character.country)}/yr (${formatMoney(netOfTax(c.salary, character.country), character.country)} after tax)`);
     html += `<div class="section-label">Job Performance</div>` + perfBarHTML("Performance", c.jobPerformance);
     html += rowBtnHTML("📈", "Work Harder", c.workHardUsesThisYear >= 1 ? "Used for this year" : "Once a year", "workHarder", null, c.workHardUsesThisYear >= 1);
+    html += rowBtnHTML("🚪", "Quit Job", "Leave your current job", "quitJob");
   }
   return html;
 }
@@ -1417,16 +1487,24 @@ function renderFlowOverlay() {
     else html = overlayShell(f.subject + " pop quiz", `<p class="overlay-text">${esc(f.question.q)}</p>` + f.question.options.map((o, i) => choiceBtn("answerSubject", i, o.label)).join(""));
   } else if (f.type === "tryout") {
     if (f.step === "pick") {
-      html = overlayShell("Tryouts", `<p class="overlay-text">Which team will ${esc(c.first)} try out for?</p><div class="chip-wrap">${sportsForCountry(character.country).map((s) => {
-        const locked = s === "American Football" && c.athleticism < 7;
-        return `<button class="btn-chip" data-action="${locked ? "" : "chooseSport"}" data-arg="${esc(s)}" ${locked ? "disabled" : ""}>${esc(s)}${locked ? " (train harder first)" : ""}</button>`;
-      }).join("")}</div>`);
+      const autoIn = c.talent === "sports" && age < 18;
+      html = overlayShell("Tryouts", `<p class="overlay-text">Which team will ${esc(c.first)} try out for?</p>${autoIn ? `<p class="flavor" style="font-style:normal;">Your sports talent means you'll make the team automatically.</p>` : ""}<div class="chip-wrap">${sportsForCountry(character.country).map((s) =>
+        `<button class="btn-chip" data-action="chooseSport" data-arg="${esc(s)}">${esc(s)}</button>`
+      ).join("")}</div>`);
     } else {
-      html = overlayShell("Tryouts", `<p class="overlay-text">${f.passed ? `Made the ${esc(f.sport)} team!` : `Didn't make the ${esc(f.sport)} team this time.`}</p><button class="btn-primary" data-action="finishTryout">Continue</button>`);
+      html = overlayShell("Tryouts", `<p class="overlay-text">${f.passed ? (f.autoIn ? `Your talent got you straight onto the ${esc(f.sport)} team!` : `Made the ${esc(f.sport)} team!`) : `Didn't make the ${esc(f.sport)} team this time.`}</p><button class="btn-primary" data-action="finishTryout">Continue</button>`);
     }
+  } else if (f.type === "tournament" && f.step === "pick") {
+    const tierRow = (key) => {
+      const info = TOURNAMENT_TIERS[key];
+      const avail = tournamentTierAvailable(key);
+      const reason = info.minRank ? `Requires a top-${info.minRank} national rank` : "Always open";
+      return rowBtnHTML("🏆", info.label, avail ? reason : `🔒 ${reason} (currently ${c.teamRank ? `#${c.teamRank}` : "unranked"})`, "pickTournamentTier", key, !avail);
+    };
+    html = overlayShell("Enter Tournament", `<p class="overlay-text">Which tournament will ${esc(c.first)}'s team enter this year?</p>` + Object.keys(TOURNAMENT_TIERS).map(tierRow).join(""), "closeFlow");
   } else if (f.type === "tournament" || f.type === "marchmadness") {
-    const rounds = f.type === "tournament" ? TOURNAMENT_ROUNDS : MARCH_MADNESS_ROUNDS;
-    const label = f.type === "tournament" ? "School Tournament" : "March Madness";
+    const rounds = f.type === "tournament" ? TOURNAMENT_TIERS[f.tier].rounds : MARCH_MADNESS_ROUNDS;
+    const label = f.type === "tournament" ? TOURNAMENT_TIERS[f.tier].label : "March Madness";
     if (!f.done) {
       html = overlayShell(label, `<p class="overlay-text">Round: <strong>${esc(rounds[f.roundIndex])}</strong></p><button class="btn-primary" data-action="${f.type === "tournament" ? "playTournamentRound" : "playMarchMadnessRound"}">Play Round</button>`);
     } else {
@@ -1586,8 +1664,10 @@ const ACTIONS = {
   openTryout: () => openTryoutFlow(),
   chooseSport: (arg) => chooseSport(arg),
   finishTryout: () => finishTryout(),
+  quitTeam: () => quitTeam(),
 
   openTournament: () => openTournamentFlow(),
+  pickTournamentTier: (arg) => pickTournamentTier(arg),
   playTournamentRound: () => playTournamentRound(),
   openMarchMadness: () => openMarchMadnessFlow(),
   playMarchMadnessRound: () => playMarchMadnessRound(),
@@ -1606,6 +1686,9 @@ const ACTIONS = {
 
   workHarder: () => workHarder(),
   trainHarder: () => trainHarder(),
+  quitJob: () => quitJob(),
+  dropOutOfSchool: () => dropOutOfSchool(),
+  dropOutOfCollege: () => dropOutOfCollege(),
 
   openPartTime: () => openPartTimeFlow(),
   choosePartTime: (arg) => choosePartTimeJob(PART_TIME_JOBS[Number(arg)]),
