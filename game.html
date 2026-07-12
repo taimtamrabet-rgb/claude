@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lifeline — A Life Simulator</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel-2: #1f2438;
+    --accent: #7c9eff;
+    --accent-2: #ffb37c;
+    --text: #e8eaf5;
+    --muted: #9198b8;
+    --border: #2a3050;
+    --good: #7cffb2;
+    --bad: #ff7c8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1200px 800px at 20% -10%, #1c2140 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    padding: 20px;
+  }
+  a.back {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+  }
+  a.back:hover { color: var(--accent); }
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    margin: 6px 0 20px;
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  header p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  /* --- Create screen --- */
+  .create-grid { display: grid; gap: 16px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  input[type="text"] {
+    font: inherit;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    flex: 1;
+    min-width: 180px;
+  }
+  .stat-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+  .stat-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .stat-box .name { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .stat-box .val { font-size: 1.1rem; font-weight: 700; }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0f1220; font-weight: 700; }
+  button.primary:hover:not(:disabled) { background: #6c8bff; }
+  button.danger { background: var(--bad); border-color: var(--bad); color: #240b10; font-weight: 700; }
+
+  /* --- Game screen --- */
+  .game-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) {
+    .game-layout { grid-template-columns: 1fr; }
+  }
+  .sidebar { display: flex; flex-direction: column; gap: 14px; }
+  .avatar-box { text-align: center; }
+  .avatar { font-size: 3.4rem; line-height: 1; }
+  .name-line { font-weight: 700; font-size: 1.1rem; margin-top: 6px; }
+  .sub-line { color: var(--muted); font-size: 0.85rem; }
+
+  .bar-row { margin-bottom: 10px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-bottom: 3px; }
+  .bar-track { height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
+  .fill-health { background: linear-gradient(90deg,#ff7c8a,#ffb37c); }
+  .fill-happiness { background: linear-gradient(90deg,#ffd97c,#7cffb2); }
+  .fill-smarts { background: linear-gradient(90deg,#7cc7ff,#7c9eff); }
+  .fill-looks { background: linear-gradient(90deg,#e37cff,#ff7cd0); }
+
+  .money-line { font-size: 1.1rem; font-weight: 700; }
+  .money-line.neg { color: var(--bad); }
+  .money-line.pos { color: var(--good); }
+
+  .ageup-btn { width: 100%; padding: 14px; font-size: 1.05rem; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab-btn { background: var(--panel-2); }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #0f1220; font-weight: 700; }
+
+  .log { max-height: 380px; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 6px; padding-right: 4px; }
+  .log-entry { font-size: 0.9rem; border-bottom: 1px dashed var(--border); padding-bottom: 6px; }
+  .log-entry .age-tag { color: var(--accent); font-weight: 700; margin-right: 6px; }
+
+  .action-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 10px; }
+  .action-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .action-card h4 { margin: 0 0 6px; font-size: 0.95rem; }
+  .action-card p { margin: 0 0 8px; color: var(--muted); font-size: 0.8rem; }
+
+  .rel-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .rel-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .rel-top .rname { font-weight: 700; }
+  .rel-top .rtype { color: var(--muted); font-size: 0.78rem; }
+  .rel-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .dead-tag { color: var(--bad); font-size: 0.78rem; }
+
+  .job-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; gap: 10px; flex-wrap: wrap; }
+
+  /* --- Modal --- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(5,6,15,.72);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 460px; width: 100%; }
+  .modal h3 { margin-top: 0; }
+  .modal .choices { display: grid; gap: 8px; margin-top: 16px; }
+  .modal .choices button { text-align: left; }
+
+  .obit h2 { margin-top: 0; }
+  .obit .cause { color: var(--accent-2); font-weight: 600; }
+  .obit dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 14px 0; }
+  .obit dt { color: var(--muted); }
+  .obit dd { margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">&larr; Back to Life Sim Finder</a>
+  <header>
+    <h1>🧬 Lifeline</h1>
+    <p>A BitLife-style life simulator — age up, make choices, live a life.</p>
+  </header>
+  <div id="root" class="card"></div>
+</div>
+
+<script>
+const clamp = (v, min=0, max=100) => Math.max(min, Math.min(max, v));
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randChoice = (arr) => arr[randInt(0, arr.length - 1)];
+const fmtMoney = (n) => (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString();
+
+const MALE_NAMES = ["James","Michael","Daniel","Ethan","Lucas","Mason","Oliver","Elijah","Noah","Benjamin","Leo","Sam","Owen","Caleb","Wyatt"];
+const FEMALE_NAMES = ["Olivia","Emma","Ava","Sophia","Isabella","Mia","Amelia","Harper","Ella","Grace","Zoe","Chloe","Layla","Nora","Ruby"];
+const LAST_NAMES = ["Smith","Johnson","Garcia","Kim","Brown","Novak","Silva","Chen","Müller","Dubois","Rossi","Nguyen","Patel","Andersson","Cohen"];
+const COUNTRIES = ["the USA","Canada","the UK","Brazil","Japan","Germany","Kenya","Australia","India","France","South Korea","Mexico"];
+
+const JOBS = [
+  { title: "Cashier", minAge: 15, edu: "none", salary: 17000, smartsReq: 0 },
+  { title: "Fast Food Worker", minAge: 15, edu: "none", salary: 16000, smartsReq: 0 },
+  { title: "Retail Associate", minAge: 16, edu: "none", salary: 19000, smartsReq: 0 },
+  { title: "Landscaper", minAge: 16, edu: "none", salary: 21000, smartsReq: 0 },
+  { title: "Office Assistant", minAge: 18, edu: "highschool", salary: 29000, smartsReq: 30 },
+  { title: "Warehouse Supervisor", minAge: 18, edu: "highschool", salary: 33000, smartsReq: 25 },
+  { title: "Sales Rep", minAge: 18, edu: "highschool", salary: 34000, smartsReq: 35 },
+  { title: "Paramedic", minAge: 20, edu: "highschool", salary: 41000, smartsReq: 45 },
+  { title: "Software Engineer", minAge: 21, edu: "university", salary: 82000, smartsReq: 65 },
+  { title: "Accountant", minAge: 21, edu: "university", salary: 58000, smartsReq: 55 },
+  { title: "Teacher", minAge: 21, edu: "university", salary: 44000, smartsReq: 50 },
+  { title: "Registered Nurse", minAge: 21, edu: "university", salary: 68000, smartsReq: 55 },
+  { title: "Marketing Manager", minAge: 22, edu: "university", salary: 63000, smartsReq: 50 },
+  { title: "Attorney", minAge: 23, edu: "university", salary: 98000, smartsReq: 75 },
+];
+
+function newCharacter(name, gender) {
+  const country = randChoice(COUNTRIES);
+  const lastName = randChoice(LAST_NAMES);
+  const stats = {
+    health: clamp(randInt(70, 100)),
+    happiness: clamp(randInt(60, 100)),
+    smarts: clamp(randInt(30, 70)),
+    looks: clamp(randInt(30, 90)),
+  };
+  const wealthLevel = randChoice(["poor", "middle-class", "wealthy"]);
+  const startMoney = wealthLevel === "poor" ? 0 : wealthLevel === "middle-class" ? 200 : 5000;
+
+  const mother = { id: cryptoId(), name: `${randChoice(FEMALE_NAMES)} ${lastName}`, type: "Mother", meter: clamp(randInt(60, 95)), alive: true };
+  const father = { id: cryptoId(), name: `${randChoice(MALE_NAMES)} ${lastName}`, type: "Father", meter: clamp(randInt(60, 95)), alive: true };
+  const relationships = [mother, father];
+  if (Math.random() < 0.5) {
+    const sibGender = Math.random() < 0.5 ? "Brother" : "Sister";
+    const sibName = sibGender === "Brother" ? randChoice(MALE_NAMES) : randChoice(FEMALE_NAMES);
+    relationships.push({ id: cryptoId(), name: `${sibName} ${lastName}`, type: sibGender, meter: clamp(randInt(40, 90)), alive: true });
+  }
+
+  return {
+    name: name || `${gender === "male" ? randChoice(MALE_NAMES) : randChoice(FEMALE_NAMES)} ${lastName}`,
+    lastName, gender, country, wealthLevel,
+    age: 0, stats, money: startMoney,
+    education: { stage: "none", grade: 0, graduatedHighSchool: false, graduatedUniversity: false, universityAttempts: 0 },
+    job: null,
+    relationships,
+    alive: true, causeOfDeath: null,
+    raiseAskedThisYear: false,
+    log: [{ age: 0, text: `You were born in ${country} to ${mother.name} and ${father.name}. Family financial status: ${wealthLevel}.` }],
+  };
+}
+
+function cryptoId() { return Math.random().toString(36).slice(2, 10); }
+
+function pushLog(g, text) {
+  g.log.push({ age: g.age, text });
+}
+
+function applyDeltas(g, deltas = {}) {
+  if (deltas.health !== undefined) g.stats.health = clamp(g.stats.health + deltas.health);
+  if (deltas.happiness !== undefined) g.stats.happiness = clamp(g.stats.happiness + deltas.happiness);
+  if (deltas.smarts !== undefined) g.stats.smarts = clamp(g.stats.smarts + deltas.smarts);
+  if (deltas.looks !== undefined) g.stats.looks = clamp(g.stats.looks + deltas.looks);
+  if (deltas.money !== undefined) g.money += deltas.money;
+  if (deltas.relAll !== undefined) {
+    g.relationships.forEach(r => { if (r.alive) r.meter = clamp(r.meter + deltas.relAll); });
+  }
+}
+
+const EVENTS = [
+  // Toddler / young child (0-6)
+  { min: 1, max: 3, text: (g) => `${g.name} took ${g.gender === "male" ? "his" : "her"} first wobbly steps across the living room.`,
+    choices: [
+      { label: "Cheer them on", effect: { happiness: 4 }, result: "Everyone cheered — a happy memory." },
+      { label: "Let them figure it out", effect: { smarts: 2 }, result: "They learned to balance on their own." },
+    ] },
+  { min: 2, max: 5, text: () => `Your parents are arguing about your bedtime.`,
+    choices: [
+      { label: "Throw a tantrum", effect: { happiness: 2, relAll: -3 }, result: "You got your way, but tension lingered." },
+      { label: "Go to bed quietly", effect: { health: 3, relAll: 2 }, result: "Everyone appreciated the peace." },
+    ] },
+  { min: 4, max: 6, text: () => `A stray dog followed you home from the park.`,
+    choices: [
+      { label: "Beg to keep it", effect: { happiness: 6, money: -100 }, result: "Your family adopted the dog. You're overjoyed." },
+      { label: "Let it go", effect: { happiness: -2 }, result: "You watched it wander off, a little sad." },
+    ] },
+
+  // Kid (6-12)
+  { min: 6, max: 12, text: () => `A classmate is bullying a smaller kid at recess.`,
+    choices: [
+      { label: "Stand up for them", effect: { happiness: 5, looks: -2 }, result: "You made a new friend and felt proud." },
+      { label: "Stay out of it", effect: { happiness: -3 }, result: "You avoided trouble but felt guilty." },
+    ] },
+  { min: 7, max: 12, text: () => `Your teacher asks who wants to enter the school talent show.`,
+    choices: [
+      { label: "Sign up", effect: { happiness: 4, looks: 3 }, result: "You performed and the crowd loved it!" },
+      { label: "Watch from the audience", effect: { happiness: 1 }, result: "You cheered your friends on instead." },
+    ] },
+  { min: 8, max: 12, text: () => `You found some money on the sidewalk.`,
+    choices: [
+      { label: "Keep it", effect: { money: 40, happiness: 2 }, result: "Lucky find! You bought some candy." },
+      { label: "Turn it in to a teacher", effect: { relAll: 3 }, result: "Your honesty impressed everyone." },
+    ] },
+  { min: 9, max: 12, text: () => `You have a big spelling test tomorrow.`,
+    choices: [
+      { label: "Study hard tonight", effect: { smarts: 5, happiness: -1 }, result: "You aced the test." },
+      { label: "Play video games instead", effect: { happiness: 4, smarts: -2 }, result: "You had fun, but bombed the test." },
+    ] },
+
+  // Teen (13-17)
+  { min: 13, max: 17, text: () => `Someone in class asked you to go to the school dance.`,
+    choices: [
+      { label: "Say yes", effect: { happiness: 6, looks: 2 }, result: "You had a great time at the dance." },
+      { label: "Say you're busy", effect: { happiness: -2, smarts: 2 }, result: "You stayed home and studied instead." },
+    ] },
+  { min: 13, max: 17, text: () => `Some older kids offered you a vape behind the bleachers.`,
+    choices: [
+      { label: "Try it", effect: { health: -6, looks: 1 }, result: "You felt cool for a moment, then coughed a lot." },
+      { label: "Walk away", effect: { health: 2, smarts: 2 }, result: "You avoided the peer pressure." },
+    ] },
+  { min: 14, max: 17, text: () => `You're offered a part-time job bagging groceries after school.`,
+    choices: [
+      { label: "Take the job", effect: { money: 900, happiness: -1 }, result: "You earned some spending money." },
+      { label: "Focus on school instead", effect: { smarts: 4 }, result: "Your grades improved." },
+    ] },
+  { min: 15, max: 17, text: () => `You got your learner's permit and a friend offers to teach you stunts in a parking lot.`,
+    choices: [
+      { label: "Go for it", effect: { happiness: 5, health: -4 }, result: "Thrilling — but you scraped a bumper." },
+      { label: "Practice safely", effect: { smarts: 2, health: 1 }, result: "You became a solid, safe driver." },
+    ] },
+  { min: 16, max: 18, text: () => `A college recruiter visited your school and talked about scholarships.`,
+    choices: [
+      { label: "Ask lots of questions", effect: { smarts: 3 }, result: "You left with a clearer plan for the future." },
+      { label: "Daydream through it", effect: { happiness: 1 }, result: "You'll figure it out later, you thought." },
+    ] },
+
+  // Young adult (18-29)
+  { min: 18, max: 29, text: () => `Your friends invite you on a spontaneous road trip.`,
+    choices: [
+      { label: "Go for it", effect: { happiness: 8, money: -300 }, result: "An unforgettable trip." },
+      { label: "Stay and save money", effect: { money: 100, happiness: -2 }, result: "Responsible, if a little boring." },
+    ] },
+  { min: 18, max: 35, text: () => `You're feeling burnt out and considering a wellness retreat.`,
+    choices: [
+      { label: "Go on the retreat", effect: { happiness: 10, health: 5, money: -600 }, result: "You came back refreshed." },
+      { label: "Push through it", effect: { happiness: -5, money: 0 }, result: "You're exhausted, but saved the cash." },
+    ] },
+  { min: 19, max: 40, text: () => `A coworker asks you to invest in their new crypto scheme.`,
+    choices: [
+      { label: "Invest $500", effect: { money: randChoice([-500, -500, 1500]) }, result: "The market is unpredictable..." },
+      { label: "Decline politely", effect: { smarts: 1 }, result: "You kept your savings safe." },
+    ] },
+  { min: 20, max: 45, text: () => `You've been offered a chance to run a local charity 5K.`,
+    choices: [
+      { label: "Run it", effect: { health: 6, happiness: 4 }, result: "You crossed the finish line feeling great." },
+      { label: "Donate instead", effect: { money: -50, relAll: 2 }, result: "You supported a good cause from home." },
+    ] },
+
+  // Adult (30-59)
+  { min: 30, max: 59, text: () => `A health scare sends you to the doctor for a full check-up.`,
+    choices: [
+      { label: "Get the full check-up", effect: { health: 6, money: -200 }, result: "Everything checked out — peace of mind." },
+      { label: "Skip it, you feel fine", effect: { health: -4 }, result: "You hope it was nothing." },
+    ] },
+  { min: 30, max: 59, text: () => `Your car breaks down unexpectedly.`,
+    choices: [
+      { label: "Pay for repairs", effect: { money: -800, happiness: -1 }, result: "Fixed, but it hurt the wallet." },
+      { label: "Take the bus for a while", effect: { happiness: -3, money: -50 }, result: "Inconvenient, but manageable." },
+    ] },
+  { min: 30, max: 59, text: () => `You're invited to give a talk at a community event.`,
+    choices: [
+      { label: "Accept", effect: { happiness: 5, looks: 2, smarts: 1 }, result: "You felt accomplished and well-regarded." },
+      { label: "Decline, too nervous", effect: { happiness: -1 }, result: "You watched from the crowd instead." },
+    ] },
+  { min: 35, max: 59, text: () => `You start noticing your fitness isn't what it used to be.`,
+    choices: [
+      { label: "Start a workout routine", effect: { health: 7, looks: 3, happiness: 2 }, result: "You feel stronger already." },
+      { label: "Ignore it for now", effect: { health: -3 }, result: "You tell yourself you'll start next month." },
+    ] },
+
+  // Senior (60+)
+  { min: 60, max: 120, text: () => `Your grandkids (or the neighborhood kids) ask you to tell stories about your life.`,
+    choices: [
+      { label: "Tell them everything", effect: { happiness: 8, relAll: 4 }, result: "A heartwarming afternoon." },
+      { label: "Keep it brief", effect: { happiness: 2 }, result: "Short and sweet." },
+    ] },
+  { min: 60, max: 120, text: () => `Your doctor recommends slowing down and taking daily walks.`,
+    choices: [
+      { label: "Take up daily walks", effect: { health: 6, happiness: 3 }, result: "You feel more energetic already." },
+      { label: "Stay set in your ways", effect: { health: -3 }, result: "Old habits die hard." },
+    ] },
+  { min: 65, max: 120, text: () => `You're thinking about retirement.`,
+    choices: [
+      { label: "Retire now", effect: { happiness: 6 }, result: "Freedom at last!", retire: true },
+      { label: "Keep working a bit longer", effect: { money: 2000 }, result: "A little extra in the bank." },
+    ] },
+
+  // Random money events (broad range)
+  { min: 18, max: 90, text: () => `You won a small prize in a local raffle!`,
+    choices: [
+      { label: "Cash it in", effect: { money: randInt(100, 900), happiness: 3 }, result: "Nice surprise." },
+    ] },
+  { min: 18, max: 90, text: () => `Your wallet was stolen at a coffee shop.`,
+    choices: [
+      { label: "Report it and move on", effect: { money: -150, happiness: -4 }, result: "Frustrating, but you filed a report." },
+    ] },
+];
+
+function eventsFor(g) {
+  return EVENTS.filter(e => g.age >= e.min && g.age <= e.max);
+}
+
+function jobsAvailable(g) {
+  return JOBS.filter(j => {
+    if (g.age < j.minAge) return false;
+    if (j.edu === "highschool" && !g.education.graduatedHighSchool) return false;
+    if (j.edu === "university" && !g.education.graduatedUniversity) return false;
+    if (g.stats.smarts < j.smartsReq) return false;
+    return true;
+  });
+}
+
+function deathChance(g) {
+  let chance = 0.002; // base rare accident risk
+  if (g.age > 60) chance += (g.age - 60) * 0.006;
+  if (g.age > 85) chance += (g.age - 85) * 0.02;
+  chance += (100 - g.stats.health) * 0.0015;
+  return Math.min(chance, 0.9);
+}
+
+const CAUSES = ["old age", "a heart attack", "a car accident", "a sudden illness", "complications from poor health", "a peaceful passing in their sleep"];
+
+function ageUp(g) {
+  if (!g.alive) return;
+  g.age += 1;
+  g.raiseAskedThisYear = false;
+
+  handleEducation(g);
+
+  if (g.job) {
+    const earned = Math.round(g.job.salary * 0.72);
+    g.money += earned;
+    g.job.salary = Math.round(g.job.salary * (1 + randInt(1, 4) / 100));
+    pushLog(g, `You earned ${fmtMoney(earned)} working as a ${g.job.title}.`);
+  }
+
+  if (g.age >= 18) {
+    const livingCost = 3000 + (g.job ? 1500 : 0);
+    g.money -= livingCost;
+  }
+
+  // natural stat drift
+  if (g.age > 45) applyDeltas(g, { health: -1 });
+  if (g.age > 65) applyDeltas(g, { looks: -1 });
+
+  const pool = eventsFor(g);
+  let triggeredEvent = null;
+  if (pool.length && Math.random() < 0.85) {
+    triggeredEvent = randChoice(pool);
+  }
+
+  if (g.stats.health <= 0) {
+    killCharacter(g, "poor health");
+  } else if (Math.random() < deathChance(g)) {
+    killCharacter(g, randChoice(CAUSES));
+  }
+
+  return triggeredEvent;
+}
+
+function handleEducation(g) {
+  const a = g.age;
+  if (a === 5) { g.education.stage = "elementary"; pushLog(g, "You started elementary school."); }
+  else if (a === 11) { g.education.stage = "middle"; pushLog(g, "You moved up to middle school."); }
+  else if (a === 14) { g.education.stage = "highschool"; pushLog(g, "You started high school."); }
+  else if (a === 18 && g.education.stage === "highschool") {
+    g.education.stage = "graduated-hs";
+    g.education.graduatedHighSchool = true;
+    const gradeLine = g.stats.smarts >= 55 ? "You graduated high school with strong grades!" : "You graduated high school.";
+    pushLog(g, gradeLine);
+  } else if (g.education.stage === "university-attending") {
+    applyDeltas(g, { smarts: 2 });
+    if (a >= g.education.universityGradAge) {
+      g.education.stage = "graduated-university";
+      g.education.graduatedUniversity = true;
+      pushLog(g, "You graduated university with a Bachelor's degree!");
+    }
+  }
+}
+
+function tryUniversity(g) {
+  g.education.universityAttempts += 1;
+  const chance = 0.3 + g.stats.smarts / 150;
+  if (Math.random() < chance) {
+    g.education.stage = "university-attending";
+    g.education.universityGradAge = g.age + 4;
+    g.money -= 4000;
+    pushLog(g, "You were accepted into university! Tuition: -$4,000/yr for 4 years.");
+    return true;
+  } else {
+    pushLog(g, "Your university application was rejected. You could try again next year.");
+    return false;
+  }
+}
+
+function killCharacter(g, cause) {
+  g.alive = false;
+  g.causeOfDeath = cause;
+  pushLog(g, `${g.name} passed away at age ${g.age}, due to ${cause}.`);
+}
+
+// ---------------- Rendering ----------------
+const root = document.getElementById("root");
+let game = null;
+let activeTab = "life";
+let pendingEvent = null;
+let createDraft = { name: "", gender: Math.random() < 0.5 ? "male" : "female", preview: null };
+
+function rerollPreview() {
+  createDraft.preview = newCharacter(null, createDraft.gender);
+}
+rerollPreview();
+
+function render() {
+  if (!game) renderCreate();
+  else if (!game.alive) renderObituary();
+  else renderGameScreen();
+}
+
+function renderCreate() {
+  const p = createDraft.preview;
+  root.innerHTML = `
+    <div class="create-grid">
+      <div>
+        <h2 style="margin-top:0;">Create Your Character</h2>
+        <p style="color:var(--muted);margin-top:-6px;">Randomize or name your character, then start your life.</p>
+      </div>
+      <div class="row">
+        <input type="text" id="nameInput" placeholder="Leave blank for a random name" value="${createDraft.name}">
+        <button id="genderBtn">${createDraft.gender === "male" ? "♂ Male" : "♀ Female"}</button>
+        <button id="rerollBtn">🎲 Reroll</button>
+      </div>
+      <div class="stat-preview">
+        <div class="stat-box"><div class="name">Country</div><div class="val">${p.country}</div></div>
+        <div class="stat-box"><div class="name">Family</div><div class="val">${p.wealthLevel}</div></div>
+        <div class="stat-box"><div class="name">Health</div><div class="val">${p.stats.health}</div></div>
+        <div class="stat-box"><div class="name">Happiness</div><div class="val">${p.stats.happiness}</div></div>
+        <div class="stat-box"><div class="name">Smarts</div><div class="val">${p.stats.smarts}</div></div>
+        <div class="stat-box"><div class="name">Looks</div><div class="val">${p.stats.looks}</div></div>
+      </div>
+      <button class="primary" id="startBtn" style="justify-self:start;">Start Life ▶</button>
+    </div>
+  `;
+  document.getElementById("nameInput").addEventListener("input", (e) => { createDraft.name = e.target.value; });
+  document.getElementById("genderBtn").addEventListener("click", () => {
+    createDraft.gender = createDraft.gender === "male" ? "female" : "male";
+    rerollPreview();
+    render();
+  });
+  document.getElementById("rerollBtn").addEventListener("click", () => { rerollPreview(); render(); });
+  document.getElementById("startBtn").addEventListener("click", () => {
+    game = createDraft.preview;
+    if (createDraft.name.trim()) game.name = createDraft.name.trim();
+    activeTab = "life";
+    render();
+  });
+}
+
+function avatarFor(g) {
+  if (g.age <= 2) return "👶";
+  if (g.age <= 12) return g.gender === "male" ? "🧒" : "👧";
+  if (g.age <= 17) return g.gender === "male" ? "🧑" : "👩‍🦱";
+  if (g.age >= 65) return "🧓";
+  return g.gender === "male" ? "👨" : "👩";
+}
+
+function renderGameScreen() {
+  const g = game;
+  root.innerHTML = `
+    <div class="game-layout">
+      <div class="sidebar">
+        <div class="avatar-box">
+          <div class="avatar">${avatarFor(g)}</div>
+          <div class="name-line">${g.name}</div>
+          <div class="sub-line">Age ${g.age} &middot; ${g.country}</div>
+          <div class="sub-line">${educationLabel(g)}</div>
+          <div class="sub-line">${g.job ? g.job.title : "Unemployed"}</div>
+        </div>
+        <div>
+          ${bar("Health", g.stats.health, "fill-health")}
+          ${bar("Happiness", g.stats.happiness, "fill-happiness")}
+          ${bar("Smarts", g.stats.smarts, "fill-smarts")}
+          ${bar("Looks", g.stats.looks, "fill-looks")}
+        </div>
+        <div class="money-line ${g.money < 0 ? "neg" : "pos"}">${fmtMoney(g.money)}</div>
+        <button class="primary ageup-btn" id="ageUpBtn">Age Up ⏩ (${g.age + 1})</button>
+      </div>
+      <div>
+        <div class="tabs">
+          ${tabBtn("life", "📔 Life")}
+          ${tabBtn("activities", "🏃 Activities")}
+          ${tabBtn("career", "💼 Career")}
+          ${tabBtn("relationships", "❤️ Relationships")}
+        </div>
+        <div id="tabBody"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById("ageUpBtn").addEventListener("click", onAgeUp);
+  root.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => { activeTab = b.dataset.tab; render(); }));
+  renderTabBody();
+}
+
+function tabBtn(key, label) {
+  return `<button class="tab-btn ${activeTab === key ? "active" : ""}" data-tab="${key}">${label}</button>`;
+}
+
+function bar(label, value, fillClass) {
+  return `
+    <div class="bar-row">
+      <div class="bar-label"><span>${label}</span><span>${value}</span></div>
+      <div class="bar-track"><div class="bar-fill ${fillClass}" style="width:${value}%;"></div></div>
+    </div>
+  `;
+}
+
+function educationLabel(g) {
+  switch (g.education.stage) {
+    case "none": return "Not yet in school";
+    case "elementary": return "Elementary School";
+    case "middle": return "Middle School";
+    case "highschool": return "High School";
+    case "graduated-hs": return "High School Graduate";
+    case "university-attending": return "In University";
+    case "graduated-university": return "University Graduate";
+    default: return "";
+  }
+}
+
+function renderTabBody() {
+  const body = document.getElementById("tabBody");
+  const g = game;
+  if (activeTab === "life") {
+    body.innerHTML = `<div class="card" style="padding:14px;"><div class="log">${
+      [...g.log].reverse().map(l => `<div class="log-entry"><span class="age-tag">Age ${l.age}</span>${l.text}</div>`).join("")
+    }</div></div>`;
+  } else if (activeTab === "activities") {
+    body.innerHTML = renderActivities(g);
+    wireActivityButtons();
+  } else if (activeTab === "career") {
+    body.innerHTML = renderCareer(g);
+    wireCareerButtons();
+  } else if (activeTab === "relationships") {
+    body.innerHTML = renderRelationships(g);
+    wireRelationshipButtons();
+  }
+}
+
+function renderActivities(g) {
+  const cards = [
+    { key: "gym", title: "🏋️ Gym", desc: "Boost health and looks.", cost: 0 },
+    { key: "doctor", title: "🩺 Doctor Visit", desc: "Improve your health.", cost: 200 },
+    { key: "therapist", title: "🛋️ Therapist", desc: "Improve your happiness.", cost: 150 },
+    { key: "meditate", title: "🧘 Meditate", desc: "Free happiness boost.", cost: 0 },
+    { key: "read", title: "📚 Read a Book", desc: "Improve your smarts.", cost: 0 },
+    { key: "party", title: "🎉 Go Out Partying", desc: "Big happiness, costs money & health.", cost: 100 },
+  ];
+  return `<div class="action-grid">${cards.map(c => `
+    <div class="action-card">
+      <h4>${c.title}</h4>
+      <p>${c.desc}${c.cost ? ` (Cost: ${fmtMoney(c.cost)})` : ""}</p>
+      <button data-act="${c.key}">Do it</button>
+    </div>`).join("")}</div>`;
+}
+
+function wireActivityButtons() {
+  document.querySelectorAll("[data-act]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const g = game;
+      const act = btn.dataset.act;
+      if (act === "gym") applyDeltas(g, { health: 4, looks: 2 });
+      if (act === "doctor") { if (g.money < 200) return alertLine("You can't afford this."); applyDeltas(g, { health: 8, money: -200 }); }
+      if (act === "therapist") { if (g.money < 150) return alertLine("You can't afford this."); applyDeltas(g, { happiness: 8, money: -150 }); }
+      if (act === "meditate") applyDeltas(g, { happiness: 3 });
+      if (act === "read") applyDeltas(g, { smarts: 3 });
+      if (act === "party") { if (g.money < 100) return alertLine("You can't afford this."); applyDeltas(g, { happiness: 8, health: -2, money: -100 }); }
+      render();
+    });
+  });
+}
+
+function alertLine(msg) {
+  const body = document.getElementById("tabBody");
+  const note = document.createElement("div");
+  note.style.color = "var(--bad)";
+  note.style.marginTop = "10px";
+  note.textContent = msg;
+  body.appendChild(note);
+}
+
+function renderCareer(g) {
+  let html = "";
+  if (g.job) {
+    html += `<div class="job-card">
+      <div><strong>${g.job.title}</strong><br><span class="sub-line">Salary: ${fmtMoney(g.job.salary)}/yr</span></div>
+      <div class="rel-actions">
+        <button data-career="raise" ${g.raiseAskedThisYear ? "disabled" : ""}>Ask for a Raise</button>
+        <button data-career="quit" class="danger">Quit</button>
+      </div>
+    </div>`;
+  } else {
+    html += `<p style="color:var(--muted);">You're currently unemployed.</p>`;
+  }
+
+  if (g.education.stage === "graduated-hs" && g.age >= 18 && g.age <= 22) {
+    html += `<div class="action-card" style="margin-bottom:14px;">
+      <h4>🎓 Apply to University</h4>
+      <p>Costs $4,000/yr for 4 years. Acceptance depends on your smarts.</p>
+      <button data-career="university">Apply</button>
+    </div>`;
+  }
+
+  const jobs = jobsAvailable(g).filter(j => !g.job || j.title !== g.job.title);
+  if (jobs.length) {
+    html += `<h4 style="margin-bottom:8px;">Available Jobs</h4>`;
+    html += jobs.slice(0, 6).map(j => `
+      <div class="job-card">
+        <div><strong>${j.title}</strong><br><span class="sub-line">Salary: ${fmtMoney(j.salary)}/yr</span></div>
+        <button data-apply="${j.title}">Apply</button>
+      </div>`).join("");
+  }
+  return html;
+}
+
+function wireCareerButtons() {
+  document.querySelectorAll("[data-career]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const g = game;
+      const action = btn.dataset.career;
+      if (action === "raise") {
+        g.raiseAskedThisYear = true;
+        const chance = 0.4 + g.stats.smarts / 300 + g.stats.happiness / 400;
+        if (Math.random() < chance) {
+          g.job.salary = Math.round(g.job.salary * 1.15);
+          pushLog(g, `You asked for a raise as a ${g.job.title} and got it! New salary: ${fmtMoney(g.job.salary)}.`);
+        } else {
+          applyDeltas(g, { happiness: -3 });
+          pushLog(g, `You asked for a raise as a ${g.job.title}, but were turned down.`);
+        }
+      } else if (action === "quit") {
+        pushLog(g, `You quit your job as a ${g.job.title}.`);
+        g.job = null;
+      } else if (action === "university") {
+        tryUniversity(g);
+      }
+      render();
+    });
+  });
+  document.querySelectorAll("[data-apply]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const g = game;
+      const job = JOBS.find(j => j.title === btn.dataset.apply);
+      const chance = 0.5 + (g.stats.smarts - job.smartsReq) / 200 + g.stats.looks / 400;
+      if (Math.random() < Math.max(0.15, chance)) {
+        g.job = { title: job.title, salary: job.salary };
+        pushLog(g, `You got hired as a ${job.title}!`);
+      } else {
+        pushLog(g, `You applied for ${job.title} but didn't get the job.`);
+      }
+      render();
+    });
+  });
+}
+
+function renderRelationships(g) {
+  let html = g.relationships.map(r => `
+    <div class="rel-card">
+      <div class="rel-top">
+        <div><span class="rname">${r.name}</span> <span class="rtype">${r.type}</span></div>
+        ${r.alive ? "" : '<span class="dead-tag">deceased</span>'}
+      </div>
+      ${r.alive ? bar("Relationship", r.meter, "fill-happiness") : ""}
+      ${r.alive ? `
+        <div class="rel-actions">
+          <button data-rel="time" data-id="${r.id}">Spend Time</button>
+          <button data-rel="compliment" data-id="${r.id}">Compliment</button>
+          <button data-rel="gift" data-id="${r.id}">Give Gift ($50)</button>
+          ${r.type === "Partner" ? `<button data-rel="propose" data-id="${r.id}" ${r.meter < 70 || g.age < 18 ? "disabled" : ""}>Propose</button>` : ""}
+          ${r.type === "Spouse" ? `<button data-rel="baby" data-id="${r.id}">Have a Baby</button>` : ""}
+        </div>` : ""}
+    </div>
+  `).join("");
+
+  const hasPartner = g.relationships.some(r => (r.type === "Partner" || r.type === "Spouse") && r.alive);
+  if (!hasPartner && g.age >= 16) {
+    html += `<div class="action-card">
+      <h4>💘 Dating</h4>
+      <p>Try to meet someone new.</p>
+      <button data-rel="finddate">Find a Date</button>
+    </div>`;
+  }
+  return html;
+}
+
+function wireRelationshipButtons() {
+  document.querySelectorAll("[data-rel]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const g = game;
+      const action = btn.dataset.rel;
+      const id = btn.dataset.id;
+      const r = g.relationships.find(x => x.id === id);
+
+      if (action === "finddate") {
+        if (Math.random() < 0.6) {
+          const gender = Math.random() < 0.5 ? "male" : "female";
+          const name = `${gender === "male" ? randChoice(MALE_NAMES) : randChoice(FEMALE_NAMES)} ${randChoice(LAST_NAMES)}`;
+          g.relationships.push({ id: cryptoId(), name, type: "Partner", meter: randInt(40, 60), alive: true });
+          pushLog(g, `You started dating ${name}.`);
+        } else {
+          pushLog(g, "You went on a date, but there was no spark.");
+        }
+      } else if (r) {
+        if (action === "time") { r.meter = clamp(r.meter + 6); applyDeltas(g, { happiness: 1 }); }
+        if (action === "compliment") { r.meter = clamp(r.meter + 3); }
+        if (action === "gift") {
+          if (g.money < 50) { alertLine("You can't afford a gift right now."); return; }
+          g.money -= 50; r.meter = clamp(r.meter + 8);
+        }
+        if (action === "propose") {
+          if (Math.random() < 0.5 + r.meter / 200) {
+            r.type = "Spouse";
+            pushLog(g, `${r.name} said yes! You got married.`);
+          } else {
+            pushLog(g, `You proposed to ${r.name}, but they weren't ready. Ouch.`);
+            r.meter = clamp(r.meter - 15);
+          }
+        }
+        if (action === "baby") {
+          const gender = Math.random() < 0.5 ? "male" : "female";
+          const childName = `${gender === "male" ? randChoice(MALE_NAMES) : randChoice(FEMALE_NAMES)} ${g.lastName}`;
+          g.relationships.push({ id: cryptoId(), name: childName, type: gender === "male" ? "Son" : "Daughter", meter: 80, alive: true });
+          pushLog(g, `You had a child: ${childName}!`);
+          applyDeltas(g, { happiness: 6, money: -500 });
+        }
+      }
+      render();
+    });
+  });
+}
+
+function onAgeUp() {
+  const g = game;
+  const ev = ageUp(g);
+  if (!g.alive) { render(); return; }
+  if (ev) {
+    pendingEvent = ev;
+    render();
+    showEventModal(ev);
+  } else {
+    render();
+  }
+}
+
+function showEventModal(ev) {
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="step-label" style="color:var(--accent);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Age ${game.age}</div>
+      <h3>${typeof ev.text === "function" ? ev.text(game) : ev.text}</h3>
+      <div class="choices">
+        ${ev.choices.map((c, i) => `<button data-choice="${i}">${c.label}</button>`).join("")}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll("[data-choice]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const choice = ev.choices[Number(btn.dataset.choice)];
+      applyDeltas(game, choice.effect || {});
+      pushLog(game, choice.result);
+      if (choice.retire) game.job = null;
+      overlay.remove();
+      pendingEvent = null;
+      if (game.stats.health <= 0 && game.alive) killCharacter(game, "poor health");
+      render();
+    });
+  });
+}
+
+function renderObituary() {
+  const g = game;
+  const spouse = g.relationships.find(r => r.type === "Spouse" && r.alive);
+  const kids = g.relationships.filter(r => (r.type === "Son" || r.type === "Daughter"));
+  root.innerHTML = `
+    <div class="obit">
+      <h2>💐 ${g.name}</h2>
+      <p class="cause">Died at age ${g.age}, cause: ${g.causeOfDeath}.</p>
+      <dl>
+        <dt>Country</dt><dd>${g.country}</dd>
+        <dt>Education</dt><dd>${educationLabel(g)}</dd>
+        <dt>Final Career</dt><dd>${g.job ? g.job.title : "Unemployed"}</dd>
+        <dt>Net Worth</dt><dd>${fmtMoney(g.money)}</dd>
+        <dt>Spouse</dt><dd>${spouse ? spouse.name : "Never married"}</dd>
+        <dt>Children</dt><dd>${kids.length ? kids.map(k => k.name).join(", ") : "None"}</dd>
+      </dl>
+      <div class="card" style="padding:14px;margin-bottom:16px;">
+        <div class="log">${[...g.log].reverse().map(l => `<div class="log-entry"><span class="age-tag">Age ${l.age}</span>${l.text}</div>`).join("")}</div>
+      </div>
+      <button class="primary" id="againBtn">Start a New Life ▶</button>
+    </div>
+  `;
+  document.getElementById("againBtn").addEventListener("click", () => {
+    game = null;
+    activeTab = "life";
+    createDraft = { name: "", gender: Math.random() < 0.5 ? "male" : "female", preview: null };
+    rerollPreview();
+    render();
+  });
+}
+
+render();
+</script>
+</body>
+</html>
