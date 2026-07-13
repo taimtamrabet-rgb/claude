@@ -481,6 +481,7 @@ UI.showSlotPicker = function (opts) {
   opts = opts || {};
   const forced = !!opts.forced;
   const canCancel = !forced && STATE.characterCreated;
+  const cloudUser = (typeof CLOUD !== "undefined" && CLOUD.enabled) ? CLOUD.user : null;
   const cards = [];
   for (let slot = 1; slot <= SAVE_SLOT_COUNT; slot++) {
     const summary = getSlotSummary(slot);
@@ -494,8 +495,10 @@ UI.showSlotPicker = function (opts) {
           <p class="muted">Net worth: ${fmtMoney(summary.netWorth)}</p>
           <div class="btn-row">
             <button class="btn btn-primary" onclick="UI.pickSlotContinue(${slot})">Continue</button>
+            <button class="btn" onclick="UI.exportSlot(${slot})">Export Code</button>
             <button class="btn btn-danger" onclick="UI.pickSlotDelete(${slot}, ${forced})">Delete</button>
           </div>
+          ${cloudUser ? `<div class="btn-row"><button class="btn" onclick="CLOUD.uploadSlot(${slot})">☁ Upload</button><button class="btn" onclick="CLOUD.downloadSlot(${slot})">☁ Download</button></div>` : ""}
         </div>
       `);
     } else {
@@ -503,20 +506,35 @@ UI.showSlotPicker = function (opts) {
         <div class="card save-slot">
           <h4>Slot ${slot}</h4>
           <p class="muted">Empty</p>
-          <button class="btn btn-primary" onclick="UI.pickSlotNew(${slot})">New Game</button>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="UI.pickSlotNew(${slot})">New Game</button>
+            ${cloudUser ? `<button class="btn" onclick="CLOUD.downloadSlot(${slot})">☁ Download</button>` : ""}
+          </div>
         </div>
       `);
     }
   }
+  const cloudRow = typeof CLOUD !== "undefined"
+    ? (cloudUser
+        ? `<p class="muted">Signed in as ${cloudUser.displayName || cloudUser.email} · <a href="#" id="cloud-signout">Sign out</a></p>`
+        : `<button class="btn" id="cloud-signin">Sign in with Google (cloud sync)</button>`)
+    : "";
   openModalHTML(`
     <div class="modal-box wide">
       <h2>Choose a Save</h2>
       <p class="muted">You have 5 save slots. Continue one, or start a new career in an empty slot.</p>
+      ${cloudRow}
       <div class="grid-2">${cards.join("")}</div>
-      ${canCancel ? '<button class="btn" id="slot-cancel">Cancel</button>' : ""}
+      <div class="btn-row">
+        <button class="btn" id="import-code-btn">Import Code</button>
+        ${canCancel ? '<button class="btn" id="slot-cancel">Cancel</button>' : ""}
+      </div>
     </div>
   `);
   if (canCancel) el("slot-cancel").onclick = () => { clearModal(); };
+  el("import-code-btn").onclick = () => UI.showImportCode(forced);
+  if (cloudUser) { const so = el("cloud-signout"); if (so) so.onclick = (e) => { e.preventDefault(); CLOUD.signOut(); }; }
+  else { const si = el("cloud-signin"); if (si) si.onclick = () => CLOUD.signIn(); }
 };
 
 UI.pickSlotContinue = function (slot) {
@@ -536,6 +554,83 @@ UI.pickSlotDelete = function (slot, forced) {
 UI.pickSlotNew = function (slot) {
   UI.pendingSlot = slot;
   UI.showCharacterCreation();
+};
+
+/* ---------------- Export / Import save codes ---------------- */
+
+function encodeSaveCode(rawJsonString) {
+  return btoa(unescape(encodeURIComponent(rawJsonString)));
+}
+
+function decodeSaveCode(code) {
+  return decodeURIComponent(escape(atob(code.trim())));
+}
+
+UI.exportSlot = function (slot) {
+  const raw = localStorage.getItem(slotKey(slot));
+  if (!raw) return;
+  const code = encodeSaveCode(raw);
+  openModalHTML(`
+    <div class="modal-box">
+      <h2>Your Save Code</h2>
+      <p class="muted">Copy this code, then use "Import Code" on another device or browser to bring this save over.</p>
+      <textarea id="export-code" class="num-input" style="width:100%;height:140px;" readonly>${code}</textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="export-copy">Copy Code</button>
+        <button class="btn" id="export-back">Back</button>
+      </div>
+    </div>
+  `);
+  el("export-copy").onclick = () => {
+    const ta = el("export-code");
+    ta.select();
+    let copied = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(() => UI.toast("Copied!")).catch(() => { document.execCommand("copy"); UI.toast("Copied!"); });
+      copied = true;
+    }
+    if (!copied) { document.execCommand("copy"); UI.toast("Copied!"); }
+  };
+  el("export-back").onclick = () => UI.showSlotPicker({ forced: !STATE.characterCreated });
+};
+
+UI.showImportCode = function (forced) {
+  openModalHTML(`
+    <div class="modal-box">
+      <h2>Import a Save Code</h2>
+      <p class="muted">Paste a code exported from another device, then choose which slot to load it into.</p>
+      <textarea id="import-code" class="num-input" style="width:100%;height:140px;" placeholder="Paste code here"></textarea>
+      <label class="field-label">Import into slot</label>
+      <select id="import-slot" class="num-input">
+        ${[1, 2, 3, 4, 5].map(s => `<option value="${s}">Slot ${s}${hasSaveInSlot(s) ? " (occupied — will overwrite)" : " (empty)"}</option>`).join("")}
+      </select>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="import-go">Import</button>
+        <button class="btn" id="import-back">Back</button>
+      </div>
+    </div>
+  `);
+  el("import-go").onclick = () => {
+    const code = el("import-code").value.trim();
+    const slot = Number(el("import-slot").value);
+    if (!code) { UI.toast("Paste a code first.", true); return; }
+    let parsed;
+    try {
+      parsed = JSON.parse(decodeSaveCode(code));
+    } catch (e) {
+      UI.toast("That code looks invalid.", true);
+      return;
+    }
+    if (!parsed || typeof parsed !== "object" || !parsed.name) {
+      UI.toast("That code looks invalid.", true);
+      return;
+    }
+    if (hasSaveInSlot(slot) && !confirm(`This will overwrite the existing save in Slot ${slot}. Continue?`)) return;
+    localStorage.setItem(slotKey(slot), JSON.stringify(parsed));
+    UI.toast(`Imported into Slot ${slot}!`);
+    UI.showSlotPicker({ forced: forced || !STATE.characterCreated });
+  };
+  el("import-back").onclick = () => UI.showSlotPicker({ forced: forced || !STATE.characterCreated });
 };
 
 /* ---------------- Character creation ---------------- */
