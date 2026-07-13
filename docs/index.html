@@ -1,0 +1,2638 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Wall Street Grind — Investment Banker Sim</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%230f1420%22/><text x=%2250%22 y=%2268%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22%23d4af37%22>$</text></svg>">
+  <style>
+/* ==========================================================================
+   Wall Street Grind — theme: dark navy + gold, dashboard-style UI
+   ========================================================================== */
+
+:root {
+  --navy-950: #0a0e17;
+  --navy-900: #0f1420;
+  --navy-800: #151c2c;
+  --navy-700: #1c2540;
+  --navy-600: #263258;
+  --gold: #d4af37;
+  --gold-bright: #f0cf5e;
+  --text: #e8ebf2;
+  --text-dim: #9aa4bd;
+  --green: #3ecf8e;
+  --red: #e5586b;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: radial-gradient(circle at top, var(--navy-800), var(--navy-950) 70%);
+  color: var(--text);
+  font-family: "Segoe UI", Roboto, -apple-system, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 20px 90px;
+}
+
+/* ---------------- Header ---------------- */
+
+#header {
+  background: linear-gradient(135deg, var(--navy-700), var(--navy-800));
+  border: 1px solid var(--navy-600);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+}
+
+.hdr-row1 {
+  display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.hdr-name { font-size: 1.3rem; font-weight: 700; color: var(--gold-bright); }
+.hdr-age, .hdr-status { color: var(--text-dim); font-size: 0.92rem; }
+.hdr-status { margin-left: auto; font-weight: 600; color: var(--text); }
+.layout-toggle {
+  background: var(--navy-900); border: 1px solid var(--navy-600); border-radius: 8px;
+  font-size: 1rem; line-height: 1; padding: 6px 9px; cursor: pointer; color: var(--text);
+}
+.layout-toggle:hover { border-color: var(--gold); }
+
+.hdr-row2 { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.chip {
+  background: var(--navy-900); border: 1px solid var(--navy-600);
+  border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; color: var(--text-dim);
+}
+.chip b { color: var(--text); font-size: 0.95rem; }
+.chip.debt b { color: var(--red); }
+.pos { color: var(--green) !important; }
+.neg { color: var(--red) !important; }
+.due-badge {
+  background: var(--red); color: white; font-size: 0.68rem; font-weight: 700;
+  padding: 2px 6px; border-radius: 6px; margin-left: 4px; vertical-align: middle;
+}
+
+.hdr-bars { display: flex; gap: 18px; flex-wrap: wrap; }
+.bar-wrap { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-dim); }
+.bar { width: 110px; height: 8px; background: var(--navy-900); border-radius: 5px; overflow: hidden; border: 1px solid var(--navy-600); }
+.bar-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
+.bar-fill.energy { background: linear-gradient(90deg, #4fa3e3, #7fd1ff); }
+.bar-fill.stress { background: linear-gradient(90deg, #e5586b, #ff8b8b); }
+.bar-fill.happy { background: linear-gradient(90deg, #3ecf8e, #9bf0c9); }
+.bar-fill.rep { background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.bar-fill.skill { background: linear-gradient(90deg, var(--gold), #8a6d1f); }
+
+/* ---------------- Tabs ---------------- */
+
+#tabs {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+  position: sticky; top: 0; z-index: 5; padding: 6px 0;
+}
+.tab-btn {
+  background: var(--navy-800); border: 1px solid var(--navy-600); color: var(--text-dim);
+  padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.88rem;
+  transition: all 0.15s;
+}
+.tab-btn:hover { color: var(--text); border-color: var(--gold); }
+.tab-btn.active { background: var(--navy-600); color: var(--gold-bright); border-color: var(--gold); font-weight: 600; }
+.end-month-btn {
+  margin-left: auto; background: linear-gradient(135deg, var(--gold), #a9822b);
+  color: var(--navy-950); font-weight: 700; border: none;
+}
+.end-month-btn:hover { filter: brightness(1.1); border-color: transparent; color: var(--navy-950); }
+
+/* ---------------- Cards & layout ---------------- */
+
+.grid-2 {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;
+}
+.firm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px; }
+
+.card {
+  background: var(--navy-800); border: 1px solid var(--navy-600);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.card.highlight { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(212,175,55,0.25) inset; }
+.card.current { border-color: var(--green); }
+.card h3, .card h4 { margin: 0 0 8px; color: var(--gold-bright); }
+.card p { margin: 4px 0; font-size: 0.92rem; line-height: 1.4; }
+.big-num { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+.muted { color: var(--text-dim); font-size: 0.82rem; }
+.locked { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
+.section-title { color: var(--gold-bright); margin: 18px 0 10px; }
+
+.progress-outer { width: 100%; height: 10px; background: var(--navy-900); border-radius: 6px; overflow: hidden; border: 1px solid var(--navy-600); margin: 8px 0; }
+.progress-inner { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+
+.skill-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.skill-label { width: 110px; font-size: 0.85rem; }
+.skill-val { width: 28px; text-align: right; font-size: 0.85rem; color: var(--text-dim); }
+
+.log-list { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+.log-list.full { max-height: 65vh; }
+.log-list li { padding: 6px 0; border-bottom: 1px solid var(--navy-700); font-size: 0.86rem; }
+.log-list li:last-child { border-bottom: none; }
+
+/* ---------------- Buttons & inputs ---------------- */
+
+.btn {
+  background: var(--navy-700); color: var(--text); border: 1px solid var(--navy-600);
+  padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.86rem; margin: 3px 4px 3px 0;
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--gold); color: var(--gold-bright); }
+.btn-primary { background: linear-gradient(135deg, var(--gold), #a9822b); color: var(--navy-950); font-weight: 700; border: none; }
+.btn-primary:hover { filter: brightness(1.1); color: var(--navy-950); }
+.btn-danger { background: rgba(229,88,107,0.15); border-color: var(--red); color: var(--red); }
+.btn-row { display: flex; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.num-input, input[type="text"], input[type="number"] {
+  background: var(--navy-900); border: 1px solid var(--navy-600); color: var(--text);
+  padding: 8px 10px; border-radius: 8px; font-size: 0.86rem; width: 120px; margin: 3px 4px 3px 0;
+}
+.field-label { display: block; margin: 10px 0 4px; color: var(--text-dim); font-size: 0.85rem; }
+
+.layout-choice { display: flex; gap: 10px; margin: 4px 0 10px; }
+.layout-btn {
+  flex: 1; background: var(--navy-900); border: 1px solid var(--navy-600); color: var(--text-dim);
+  padding: 12px 10px; border-radius: 10px; cursor: pointer; font-size: 0.95rem; text-align: center;
+}
+.layout-btn.active { border-color: var(--gold); color: var(--gold-bright); background: var(--navy-700); font-weight: 600; }
+
+/* ---------------- Toast ---------------- */
+
+.toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 20px);
+  background: var(--navy-700); border: 1px solid var(--gold); color: var(--text);
+  padding: 10px 18px; border-radius: 8px; opacity: 0; pointer-events: none;
+  transition: all 0.25s; z-index: 50; max-width: 90vw; text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.error { border-color: var(--red); color: var(--red); }
+
+/* ---------------- Modal ---------------- */
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(5,7,12,0.78);
+  display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--navy-800); border: 1px solid var(--gold);
+  border-radius: 14px; padding: 24px 26px; max-width: 460px; width: 100%;
+  max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+.modal-box.wide { max-width: 760px; }
+.modal-box h2 { color: var(--gold-bright); margin-top: 0; }
+
+/* ---------------- Minigame / interview ---------------- */
+
+.minigame-box { max-width: 560px; }
+.minigame-header { font-size: 1.1rem; font-weight: 700; color: var(--gold-bright); display: flex; justify-content: space-between; align-items: center; }
+.minigame-progress { font-size: 0.8rem; color: var(--text-dim); font-weight: 400; }
+.minigame-sub { color: var(--text-dim); font-size: 0.88rem; margin: 8px 0 14px; }
+.minigame-timerbar { width: 100%; height: 6px; background: var(--navy-900); border-radius: 4px; overflow: hidden; margin: 12px 0; }
+.minigame-timerfill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--red)); transition: width 0.2s linear; }
+.minigame-question { font-size: 1.05rem; margin: 10px 0 16px; line-height: 1.4; }
+.minigame-options { display: flex; flex-direction: column; gap: 8px; }
+.option-btn { text-align: left; padding: 10px 14px; }
+.minigame-result-score { font-size: 2.4rem; font-weight: 800; color: var(--gold-bright); text-align: center; margin: 10px 0; }
+
+.reflex-box {
+  margin-top: 18px; height: 140px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; font-weight: 700; cursor: pointer; user-select: none; transition: background 0.1s;
+}
+.reflex-box.waiting { background: #7a2432; color: #ffd1d6; }
+.reflex-box.go { background: #1f7a4d; color: #d3ffe9; }
+.reflex-box.early { background: #444; color: #ccc; }
+
+.simon-grid {
+  margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.simon-box {
+  height: 90px; border-radius: 12px; border: 1px solid var(--navy-600);
+  background: var(--navy-700); color: var(--text); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+}
+.simon-box:disabled { cursor: default; }
+.simon-box.active { background: var(--gold); color: var(--navy-950); border-color: var(--gold-bright); transform: scale(1.04); }
+.simon-box:nth-child(1) { border-top: 3px solid #4fa3e3; }
+.simon-box:nth-child(2) { border-top: 3px solid #3ecf8e; }
+.simon-box:nth-child(3) { border-top: 3px solid #e5586b; }
+.simon-box:nth-child(4) { border-top: 3px solid #d4af37; }
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 640px) {
+  .hdr-status { margin-left: 0; }
+  #app { padding: 12px 10px 90px; }
+}
+
+/* ---------------- Mobile layout mode (chosen at character creation, or toggled anytime) ---------------- */
+
+.ui-mobile #app { max-width: 100%; padding: 10px 10px 92px; }
+
+.ui-mobile #header { position: relative; padding: 12px 46px 12px 14px; }
+.ui-mobile .hdr-row1 { flex-direction: column; align-items: flex-start; gap: 3px; margin-bottom: 6px; }
+.ui-mobile .hdr-name { font-size: 1.15rem; }
+.ui-mobile .hdr-age, .ui-mobile .hdr-status { font-size: 0.82rem; }
+.ui-mobile .hdr-status { margin-left: 0; }
+.ui-mobile .layout-toggle { position: absolute; top: 12px; right: 12px; }
+.ui-mobile .hdr-row2 { gap: 6px; margin-bottom: 8px; }
+.ui-mobile .chip { padding: 5px 9px; font-size: 0.76rem; }
+.ui-mobile .hdr-bars { gap: 10px 16px; }
+.ui-mobile .bar { width: 64px; }
+
+.ui-mobile #tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+  background: var(--navy-900); border-top: 1px solid var(--navy-600);
+  margin: 0; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  gap: 6px; z-index: 30; box-shadow: 0 -4px 18px rgba(0,0,0,0.4);
+}
+.ui-mobile .tab-btn {
+  flex: 0 0 auto; padding: 10px 14px; font-size: 0.8rem; min-height: 42px;
+  display: flex; align-items: center;
+}
+.ui-mobile .end-month-btn { margin-left: 0; order: -1; }
+
+.ui-mobile .grid-2, .ui-mobile .firm-grid { grid-template-columns: 1fr; gap: 12px; }
+.ui-mobile .card { padding: 14px 16px; }
+.ui-mobile .card h3, .ui-mobile .card h4 { font-size: 1.02rem; }
+
+.ui-mobile .btn { display: block; width: 100%; min-height: 44px; margin: 4px 0; text-align: center; }
+.ui-mobile .btn-row { flex-direction: column; align-items: stretch; }
+.ui-mobile .btn-row .btn { margin: 4px 0; }
+.ui-mobile .num-input,
+.ui-mobile input[type="text"],
+.ui-mobile input[type="number"] { width: 100%; min-height: 42px; margin: 4px 0; }
+
+.ui-mobile .modal-overlay { padding: 0; align-items: flex-end; }
+.ui-mobile .modal-box {
+  max-width: 100%; width: 100%; border-radius: 16px 16px 0 0;
+  max-height: 92vh; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+.ui-mobile .modal-box.wide { max-width: 100%; }
+.ui-mobile .option-btn { min-height: 50px; }
+.ui-mobile .layout-choice { flex-direction: column; }
+.ui-mobile .reflex-box { height: 170px; font-size: 1.6rem; }
+.ui-mobile .simon-box { height: 110px; font-size: 1.15rem; }
+.ui-mobile .toast { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+
+</style>
+
+  <!-- iOS "Add to Home Screen" support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wall St. Grind">
+  <meta name="theme-color" content="#0a0e17">
+  <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjogIldhbGwgU3RyZWV0IEdyaW5kIiwgInNob3J0X25hbWUiOiAiV1NHIiwgImRlc2NyaXB0aW9uIjogIkludmVzdG1lbnQgYmFua2VyIGNhcmVlciBzaW0uIiwgInN0YXJ0X3VybCI6ICIuIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwYTBlMTciLCAidGhlbWVfY29sb3IiOiAiIzBhMGUxNyIsICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3BuZztiYXNlNjQsaVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUxRQUFBQzBDQUlBQUFDeXI1RmxBQUFRQUVsRVFWUjRuT3g5YVhCYzJYWGVkeDhhQUxFVFhFQVNJSWZEWllhemFCWktuc2tzSG11SnB4UXBTcFJGS1Z1cE9CWFpzU01uVlZrcStSUEZyaWgvVkU3RmxVcWxyRGo1RlZkRlRzV0piY1dSTlJrNW1ralJhRGJPdnBMRElUbGNoME1TQkxIdjZKdlgzZS9lZTg1ZDN0Sm9nR2l3YjZFZUd0MzN2dmVkZTg3NXp2Y09HdWpTeU9GUEN5RUFDUWdwWmZ4WUhjdmtzUlR4cTZnZXBVUXlQVDdHajBYdFdKMnBuMkR6NmZQVy9OcDVuUG4wQ1AwWTVFUlF3emNmZEZXeWxzOG5HT3lyT1BhVzJYWHAyaHI4L1BiV0VLVE81NWlyVjZpOFVBYThQZ3JzT1ZMczljOG5MaldZU3pveTRxUENWNWxTeFkwa0dpb3oxRkVrRmxhUDVsSkpxQ1JIZ2xKVVZ5WkhOajh4Z2N5bkdKSzExZTFQbkZ2N1Jqd043WnZxZkI0OHlmNUtlNzZheE94TkxQWFpTMlBDR01rU3hPeXZ4cHdnWi9ZaVpDL0hiS0paMjZzM25leVAzbk9WTEFhejExNHlINWFQakNzWTVvanNZRFVhYXA3UWU1M1lBQUdoUTVFZGs1eFdPYVQyU085WEVrNWtmcklxaVpqRUhzRXdKQzZBaWxRVGkyUWtYbFNZeVU1VlYwR3F1QWRGVG5aZmtQeXUyU3VJdlhyRGFIeW9TR1dXYXZ6SktzRVNKVEZHN1g3SVhvSTVjU0N6VmRscmZFVHlvYmFXK01ocnJ6QThwL0FyZXdNK1NwakRFNDl1RHFsUUJGZ202UWlRM25oME9LT0dRTUNPWDVyOWhEUDBEeTVuV01ndHpvREZHWW90QkNSZjVlZElpeDNoMkd0eE11Rkk2ZHFyYzUvYks3VzluT2NzNUlvejRQRVJzUmVPdmFZT2dQRzZwRDZTSVI5RlBCNkpoeWhuTUpKVDNqSTVaR1dTcXE5T1BFckRBWFlPRVE5Qjd3SWhRU0ZaU2xpWjVPVU1lejcwN3ZQNVBudU5oNlNITTJCbG51RU1NTTR3MGVteGwyT1drdFQzNnJYSXBtdExZVGpEOERRVWNvKzlCTFB3K2doZUh5VVl4TjQ3UHExZEFJWE9qa0ZySlBhYitjblRqaG9pODRXVERkb2ZrbHdYQklSTWhTQ0Y4SjZlbmNuR0FNa2ZabUhtbXdLUHZiQXZLL0xaYTJIMnpUZnJYRGpKZEpteVFYUlNmVDZLWkowNmc4VWpzamdqVzJlb2tPT2NRWFdHemlFb3JVNVB2elk2QTM2ZFFmQ3ZxODVBM1RxRFlralZHUUEwOHJhQjdiZHJJdkRIbFBhUXFiNjZPSmhWK3Q0a2VRRk9EVU9nN2libzllbENPVlQxbjlFWjF1a0Znc2lwem9EUkdkNGNzblVHdUwzMnZSL2ZDQnQ1UUdmb3dGUHhoNUM5Nms3S1FaNW1yN24vb25UbTJCdndFWDB4eXFNenZKelJZSjJCRk02b25jektKQzluMlBPSnptRDU2bkNHY05uUmNBWlFRR2VRRFM2cU01Q3VNeVNJaityU0dmRHJETHJuOVA2ajFPcG5LSHRaZXVvakV4S2J0SjlCOTV6T2o0cm9ESmtXajNYb0RPVUl0UG9aT3FBWU82NVRQd01BUmE3enArVEpJUldLcE53QnJYN0c1dTFuZUpCWGZSU0ZkRWFybjFGQVoyZ2ZpOEk2UTVKTnYxbjlETW9MS3A0cSt5TkdEdjhjUWlPeFA4R3VjZG02bDgwWFRqWm9mMGg5SHFsZVNQWVhLUkJhL1F4NHpMVHdTN08zRk1NcWZSUWhRMmV3ZUVRV1oyVHJETGc2STRsZmc1TndScXVmVVV4blVBeEZkUWEwanhKN0E4eEJPRU5iSU9xTlI1MTVoVGpEeWp6T0dhSDV5bHRVTElVd1c1YmE5dkorQnI5SUNEbGJSUUpQZjBNUU9ZRlBrS2V0Y25pOVBoOFI1TGFQSWgwOHlYclluTkZnbllFVXpxaWR6TW9rTDJmWTg0bk9ZUGtxVy8wTVAyY0VkUWIxVVFubU5FekhNdnBzOVRPY2V4UGpNWSs5SFBPRzcyZlEyS0kraXR4TWF2VXpib3JPRUhYckRHMXZIVG9qamRjcnpDRUFsa2s2QXFRM0hvVS9IZ1hzK0tYWlQrSlIvK0J5aHBWSkZtZWcxYy9BMnZRekhGNVBmQlMxK2hrRmRJYjJzU2lzTXlSaCtvM1d6M0E0TXZGUjlXNGxzVC9Ccm5IVmQyOENsYW1tQnVoaUhoNnRmb1pVQkJkWUpPbWtOZk1SS0liSUc0L0k0b3hzbmFGU0RxMStobTN2aHV0bklLQUYyL3EzNzRjcERwQzhqcG9YNE5Rd0JPcHVnbDZmTHBSRFZmOFpuV0dkWHZqVHlOWVpNRHJEbTBPMnpraE83RUVPaFRtTVBLQXpkT0NwK0VQSVhuVW41U0JQczlmY2YxRTZjK3dOK01pSFBPUWpHME1rNWRyb0RLUndSdTFrVmlaNU9jT2VUM1FHeTFmWjZtZjRPU05YUDRQcURCb2RKVWFmYVBVekNBZG9leEd5bDJOdTJuNEdTQzdSQ0kyQzhWaUh6bENPUUt1Zm9RT0tzZU1HN1djbzQwRTJyK3Jua1VOUEpKbFVsKzQxTlV5bml2MkRkMGpiZlpKaTg4NVgzcEt1aEFpczRwTkN5SzJMNUxKWDBqS2RiU21CYjhISlFrN20xK0VqZ3B4Zk53ZHlxZDdQZ2Nib0RBRzAraG1FNlp1bG4rSHhVZlZhTmVabzlUT3lPY05pdStTVmNMNzZNT3ZwTW1XRDZDU09lYTM2R2FHMVVUcG5aT3NNdURvamlWOXpMY0laclg1R01aMUJNUlRWR2RBK3l1aG5xTTBqVEVNMFI3RjRUSzFoS1VOYTVoRE9DTTMzNm94QURobmtjR2tvVzJmNEVUUkNaeERrYWF2a2h0QVpsRWFqVmovRHNDTkM5bWJvREoxNzFGSTBUeitENmd4S295V2kxQUIrYjYxTmJ2VXpHT1pOMTg4ZytjYnNqVkNIemxDT1FLdWZvUU9Lc1dPVDlUTlkxaEY3eGZDaG56VlljK29NeVJWK1Z2V1ZEZEFadW1aN0Y5V3JNekx0clZ0bjJIQ3lrSlA1TjFkblVCOUZOQjViL1l6OE9rTVNwbS8yZmthSTE2dk1rWnBEVURYUEY0L0IwZXBuSkp1UDRBYlJTUnp6ZXZjekVQQlJSRWxmNXh4SS9LTFZ6OGl0TTFDM3pxQVlpdW9NYUIvVjJjOEkrRWd6aHkrbVVtdFl5cENXT1NRZVEvTzlPcVBWejlEejEwOW4wRlZScTUrUlgyZm8zS09Xb3ZuN0dTRmViK3Nmdkkxc2wrOStGenE4QmNLVUlkanRKSTFIWDRMVCszdHlMVWhZOS9lK0N6RE9FQ3ovK0h1NkpFV2VyS1VlUytsbndLOHp0TytrQjQ1SW8xUzduNEVpOXZvd0s1ME9iaTkxbUVHc01hVFo2L2dvMGprSGtrTm85VE5FWHAwaDZ0WVoydDZiM2M4Z1BoSVVzeGcrK0Rqb1ZYRXI5alArd3pmMi8vd2ovZlRWdi9PYlo1NTdZenFBbk1LMzRHUWhaenkzRVhVR1hSRzEraGtwdFFDM1JqK0RSZ2IxVWNtdXUzQi9iMkk4QkxjbmI2N0JhcGpVRWNEbkIzVkcrdTlOSUdtTllQU0pCdnplWlAvT012Z1kyVlpXOW1yZjBkLzFTQ3YvcVA4ODl2b3hrL2ZxMXZ4allUWjc3dmpJdFRmRlJ3R2RFZlNSQ3JmSXJydHdkVVlTdjJhRENXZHNqbjRHMG9iRmpwdXduMEV4RzE0M3pHRTRBeUhPVUhZTEhWK21JdGp4Nk94NE1sOUE4bFYrem9DeGxnYXMrbDB4VSt3Nmg4QTV3eURYdWM5MXZzTGdxRTVyR041eWtZTWpaL1phSEFPMWl1Z01nbHh3SXZJaUQvRzZzSHlrTm85N05zZ1pFc1JIbEtlalZqOERRZVpnbG1MejlqTmN6cWdoTDFFL2tYaTAxcGpCL1pvU2ozcStwVE5rWHAzaGNJYUVsWCtyMGhrR2M1QTVMSGFzVjJjSW0rMEFtSnoxYzRaMCtobVd2VFVmQ1RLZllTaWtNeXpPME94WWNySmYwUHNDR2hsYVlXZ2RhcTBTZ2w4MXlSNzJxanZmZU5vNG44WUhXY1dxaVkzQmlxb2txT3o1REVOdmw3ajdRTS9oMnpxMkRXNng0dUxQUDdwdGNGdjM5S3ljbkZtZW5pMVBUSzFNenkyUFQ2MWNIVnMyKzJEZGhkcjJPdnRqSTdjdDlTQVA3NTRWVldyejNQbGVIeW5tc1BlWlhTWHVjenhtSmhNWHdUOGtIUGZwNXdQemljM0djZ2kzVHJOZE5wUEl1VmJiejRoZkhCbHEvd3VQOXoveHlmNDc5blVNYmU5QThURTZ2dlRCdWZsM1Q4KzllMnJ1alpQVEZ6NWU4aUFuOEdtTXdtT3BCek5CenJjaGg0L1lLdHRIM2xVMFZnRHFvejBISHZQR295Uk1sVHNlMlh5ZTl3aHpocUNmbzVhMk5vc3pER1puL3M1dHBiLzlwZTJmZTdqL3p2MWIwTkF4UHJWOC9NemM4US9uWG5sMytzOWVtTXpBclBJN1lHL1o1cm1jOW1vZitlYm44NUdIMThXZWc0K1JlQXdPcFdWcWozUEVveTYyN0dGV0RsbEpweDZxSzBrbmg3STVZOS91MHRlL012U2xUdzkwZGJaaExjZkZLd3VmK2VYMzRNRzhVZDZmNFZtQk5CK1ZFS2hodFpWRk9XT2o2WXgvOWV0N3Z2cUY3VmlYMFZFQ3ZKeFJWR2NFRkpLckJSdXRNMnlGVk1JbTdXZmNmN2pyMy82emZmdUhPN0Zlbzd1VEd0Rk0vUXkrL2NaSEpYZzRvd1pnbFRvam5UUEVtbjVlNjllK3ZQMGJ2ektNSEdONmF1NzYxY210MjNvSEJudm84NmRQZmhSajZPM2QwdGZmMWRQYmhYekR4eGtlbmNIdFRkY1pPYlJnYnAwUjVneS9qMHJKR3NDcWZ5YnZtNjJmOFl1ZjM1WVpHU3NySytmT1hMMTQ0ZnJjekVMODQ5R0hEbGtUYmx5ZnZqNDZWWHZjMjdkbFpOLzJQU1BiT3JkazNkMTRPQVBKMGM4Wkc2S2ZFZkpSQ2RoVS9Zd24vMXovTjcrK0I2bGpibmIrOVpkUFQwM094NDgvR3NPNzU4V2Q5OXR6WGp3cGpwL0M4S0RZdTBQdXh2ejc3MTA2ZGVMeW9TTzdienV3cTYwdENwN2F6M1k1ZEVaNDk2eW9hclRPQ1BGNkJSeGhEaEtQamRNWldCT2RZZktQVmV2aEhSMy81cC91VFhNZWNPM0t4RnV2blptZFgvbmhtMjB2dmgrTlZkK3o4ZmYrcGozdG96SHhnOWRMTmJ5N0JzcVBITUhEZDZ5c0hQL280dm5SQno1NXNIOXJqL2ZrZW45UlZHZUltNlV6dkQ1S3dFV1MyNmFPZ29kczdUNVdidkQzWi96R3IrN3UyWkoydjdxNHNCUkh4dVhyNWQvK24yMVB2ZHAyZlFySjd4R2NVYlV6UVg1bEl2cVRZOUUzLzZEdDZkY3dQcjd3d3JNblByb3c2ajIvNG1kMUJtbXlOckczNmlmakF4TlBZUFpxWnEzKzRQRVIyUitmanlSQ1BvTGE3YUNQYXNzcWg1SmR3OHcxc211WW96T1FWMmVvK0RVNnc4UkJuYjgzK2N6UDlEejU2QUJTeDVrUFBuNzl0UHk5WjBvTHkxd2JPWVA2cnphV2xzWDNYbTU3NFhqNWw1K1VwWGN1RHUvYjRWOGwvRHFEeG9yOXV4NnZ2V3crOTFFUm5TRjhPaVBWUjdWbGxVTUVhTFl3YWdOWjhVaXpuek9OVExKZnJPdjdNMHB0OGw5K2ZRU3BZM1ptL3AzM3J2emVNMUVjR1FSemlEbDR5Q2g3UjZlamYvM0gwWS9mWHBtdEtsblBLbWx6Qmd4bkdPU3ErZ2pDN1FuYnEwUUJWTmlxelNOTWt6ejIra2hRekJabmtPMlh6dS9EclZXVjRLaSsxa2lkc2E3OWpOcng4NDhOakF4bDNFcGN2alFXbDVLRjVRaXM3cVl4QjdOWGVTNCsvTkh6WW1KODJyOHF2ODdBemRJWnhsUHdjSVphcGY3MytXcDBocEMyemhBaG5RRkxaNmk0eWFVempKOHNqcW5zOHVNUCtCVWlIWmV2emovN1hrVHFycUR1Q3cxSmtHdktXMXdXRnkvUHVKUERuSkdwTTJRRGRZYVhNM0xxREJPZFFrUzJmaXlzTTI1YVA0UFczY2VQWmdmSGMrOHNBaVNPdGRZUmFhc0V4NkRkOStZSlQzQ0VPV05EOXpPb3pxQjEzSHlXZmM1NHJGOW5DTC9PRUtoVFoyZ003U1d4ZTBkMm0veU45K2VvemlENUVLQU95OTRFZm1MdjgyL05McStzK0ZlSnNNNlFVcVRwRExsbU9pUEU2OVlxRXFrQ1VZTjBCdGF6bjJIeXI0cGh6ODUya1o3KzFWTmN2aTVoY1FaVXZub0gxeG1TVitzekg0dkpjWWM4WkpiT0VEZExaM2g5NU5FWjFONUkxcU16NE1RajFyT2ZRU3RDL0hoa1p3blpReXpJZHFNekFNM3RqQjBkVDJ2TWdyR2RpRHNkWTlkbm5ZczBaVCtENmd4cWI2a3VuWUc4T21NTitobHUzYjE5ZDU3Z3dOMEh1NTk5ZFZwWTZSMk1ERENkQVp2dDRoK2VldWJTa2ZjdjZSV2prelVYZ09pRzV1aG5oSHdVeVRYVkdmRHJER0MxT29OaUh1eFA2NWZyOGJQeEhZM2haNmtrUWFpbWdPa01pcUZtcjhUWnEwNWdlWFVHRkdaczBINkc1THl1N1MySituWEdUZWhuVUF3NlhwY1dsNUJqUFBaZ241UlhCTSs4Rk9hd2RZYnhkSUk4N3FuL3lUR2VDZkFpeDAzU0djWlRRRjZkUWUyTm1xdWZ3WEpJSmprME03dU1IT091Z3oyZmZhalBjSFdJTTh6VmJaMmhOQXFFYldsK25iRVIreGtXWjJoN285dzZZMFAwTTFnT0tjVjY2Vm91NW9qSE4zOTlaUHRBaWZvdk9DVFJWWXd6a0J3NUlGZG5TRFJOUDhPVU9PNmpDQTNYR2NLdk13UWFvVExiM3dBQUVBQkpSRUZVcVROSTdPTE1wVVhrR3lORG5mLzF0dzd2R09BQ1Z2cWloTnBMZEVhWU03ak9hS3AraG5SMVZSVm1wSkdSZlVuUkdiaUovUXhKcWpXcGVwaWNFMHRMdVNwTFBBN3QyL0svL3YyZDdMOXhDRjk5b2ZsSE1pL01HUnc1WWZYMTFSbGVIeFhRR2RSSFRPYzdPZ05PUENLa005YWhuMEYxaGliSGVPYkVqRmhlekJzYzhSamEzdkVmZitQZzcvNkwyKzg3dklYNnlRa1Bnd0dPenRoTS9Rdy9yd09NWURkNFAwT3lTREkxUHY0K05qWTcwbFBzcjVXZWZIUnIvUFhXeVpuLzl2U1ljTzZGamM0UWZwMUJZOFhHN0xXWHpXZDdYa2huckVVL2cra3FqZGtFaDlyM2pmQStVRFhmajhId3VmWWp4QWRuYm96czI0Ymk0LzQ3ZStJdjkza0h1VzFwSWVTYVV4T1dUVFpQTnVoOW9Id1YyUHRBK1NwNFZvVjlGT21BeElidloxQ2R3ZndJK2NMckUvbGxSNTVSajg3QXpkSVp4bE5ZdGM2Z1Bvb2NuYkZ4K3htVUhQV3UxZmJ4cFpQaTZrYzMwTGp4MTU3Y2RlK2hydkM5eWFicVo0UjgxTlkzdUJjaG5VSHU3ODNndktvb2tqNms4UWorZ2s5bklFMW42S2pudnRPRk5Kay9Pb1Vuaml6dVA3QVREUm9qdTdaODlRczdIM21nZDJhdWZPcjhuSXZCNWpuTi9zWlNtSXFnRUtzdFRMVVhQREpnY3diWi9wQ1B6Rkg0ZkFUWFI3Q3FRZVhZMWpNd1Fpb2NxVjd3OVROc25RSFE5MGJZT29NYTVWUnJoS3Exd1FEZXp5QWp5U0ZoNmlpNlM0dEg5cmYzRDNTamNTUHVpL3pGSndiLzFwZDI3dC9UZVdWczZkcllrbzJjWXpBOHg0eFhpTE4wQnJ6OURGdG5wUGhJdUQ2aTJBaG41UEpSd2h4T1BDSWNqeDdPQUZ5ZFFkUGJxZGtJNlF3SXBrdWNIREpRSkNtbWxaOG41c1M5UTVON2I5dVIvbmNyZFl6dUxXMzMzZEh6QzUvZmNXaHY1eHZ2ejh6TWxnMXk0ZEJFQUxtak0xQUhaeUMvajVqT1NPVjFlRGlqZHJJYWN5QXJIdTM0NVp5Uk54NTF6OERSSlU0Tytmb1pRbG5uNXF1c3RzTDZ1MVoyOVM4UDdkNktOUmp4dFk3YzN2MHJmM1hYSGZ1M25MMDBIN05JZFpmZ3QxZnBETTE0Wm04aGVJcGFuTUhtRitjTXJVVW9jeFQwa1lxWW1EbEdDdWdNRmIvWk5helJPa000T29QbFJQV1oweC9qdnVHWjNYdjZ1cnJXOEkvcjc3aXRLMmFSd2Y3U3krOU1MYStrcGoxOVhGQm5DSi9PU1BXUk9XYjVLT2xua0JmOFB0TE0wWlE2SThHZ2NpdSttWjJjdzBqM1JFd2U3UjI1M2dGVTM0Z2k4ZUJkdlgvOTU3ZC9jSDcrL09VRnJqT3daanFEMkxzcW5TRlRmRlRGbjh4WHpKRVJqNnZRR2U3SkdxVXpUUFUxcXk1ZEY0ZDJMUzlOM1JqYVBiaW04UkdQM3U2MnYveVpiVnY3U3MrL09iV3lzZzQ2QXczV0dkS2pNOVFwS3kvSHpER2NxVE5zemtDUkdxWXpvcmpPb05aNU9JT3dGeFR5ZUx4N1h0eXpkMlhteG8yMTVvOHF4Z3FGZk82aHJVODlkMk5ob2J4S25WSHZ2Y2xxZFliTEdZbzV0dTdOMEJrT1p3VGpzZEU2QXo2ZElXV0ltSkt4dUN4ZU95UHUzcnM4YzJPOHI3K3J1MmZOLzduUDBMYjJ6ejQwOFBSUGI4ek5sNW05VGRMUDRLYzAxMnJyMlRyYzFEb0QwRnBWTDVLVitEaUZ1L2N0VDQ2T0xTNHNiZDNXMi9EN1cydnMyTnIrOEgxOWYvRDBhRFAyTTJwQjRmb29ZUTVtNk9wMUJvbkhCdXNNdzFnSXJxcE9YVndScjU4U3c5dlJLV2N2bnJ0V0twWDZCN3FFSFh5TkhMdDNkQXdQZGZ6d3hYRTBVbWVzUno5RG5US3B6aHA1bFRsOE9tUEQ5ak84T3FNMnJMb2J4OGV4aytMR3REd3dKQ2ZHSnE1Y0h0L1MxZEhUMitEL1Ewckh2WWQ2TG84dXZudDZ0cm42R1NGZWIrdmRTdjV6Z2VIMkRkM1BDQTNCTWRTZ1hSd1ZQMzBQblNYczZsdTZjdmxHL05YZTN0YlR1MVlzOHZBbityN3ovU3RMbFhlMU5rMC93KzhqVklOamMrZ01XRFdlNU5EU0N0NjdFTDEyR29OOWNyQjdKYWFReXhjci81cW50NjhyaWhxc1JUbzdvbEtiZVBhMWlWWG9ER0x2dXZRemZENml6TEY2blVGR2czV0dxYjR5WFdlSVlOMnRIS2NYeEN1bjRpOXNhY2VPM3ZMWTZPU0ZENjhzTDYvRXR6UHQ3WTI4NDczbllQZDNueG1kbWltTE9uVUdHcXd6WkFHZFFaM1QxanN3ekoxQU9BTkZhcGpPaU9JNmcxcVh2NTlSRzducUxxVGVxT2s1dkhsV3ZIQ2lNbXYzVmprOU1YUHV3NnZiZHZSMmRUZnNqcmU5Rk1XLzZIL3A3YWxtNldmd1BUYytxaktIbEY3T0NNWmpvM1VHZkRwRDFxMHpNbXAyWmViOGNuVDhBbjcwdHBpWmwwTmJjV0QvWUdPRjZ0YSt0dS84NmJXY25HR3g0L3IzTXlndDBQbVJsek5VWk5GandpVWtIbUhwak9xTEVtWitqUWwwVGlCVlo0RE1wenBEci9YcGpOcXFhcnpEc0tLME1pT3BqN1hkSWZZdUx1T1p0OFZ2L3I2STZjUWFZNk5UL24rL2tXOGNPZEN6ZDFlSFgyY2tSOC8rK0RtRHJVcnFzdkpSc2t0d2ZlU3hGN1ZOdEh6RTdxcXE4N1dQSXBLa3lWR2QzZElaS2dLb2J0RHhLRU02UTJxZEljMk93TWNjdFFxcVZrRmxVdldTK24xMWZKR3V1NUtGcTdaWjdRS2NuQ0E3WGxtMTdGRFRtUTh1Ly9nSGI3MzMxcm54TWUrbnkyYVB4eDdzTS9acTVNTFNHZEp3aGtJT2ttTUJuZUhZNi9ySVl5K1V2WmJPMEQ0QzNXMGs3eUcxT2NPdFNUd2VGV2RJdmFlZWVBVGpERjgvUSsrYXppRmZIUVY4T2dQUUdGZ09DWTRCc0hOSWF0NFNKbnFFVTdZdVhKY3o4eXNYem8yKzlOejd4NTU3ZjJwaUZnWEgwU005dEpwSUgyZUFjUVo4bktIWGlpeDcvWndoZlp3QnlobWdQb0tLM2NvRlNvSnpCcmtHajBmcDRRempNWm1tTXlTTHBBUzMwOC9nT1dIQzNjTVp0czZ3TVF1VFE3QnppTzRkd1d5UFl5ZmxkMzhzZithd2ZPd3VjUWpUei8vaytMNzlPNDdjdXk5L0cvNytPN3R0ektBNlF4cHRKR1dZTTJwcjAzMGttSTg4OW9aOEpMWE9ZRDVTeDVMaURNM25JdVZldzlLOUNXQ1A3cFZHZTZ1am80a2sySHp2S3RqcVRObmcrWjJGSDdsMDdzVTh5RjNYeHM4dkx1SDVFK0w1NC9MMlhmSVhuNGluajA1TnpoNTkrSEJIUnp0eWpEMzYzNVNScS91UkM4SHdTMHZQMGZzSW43MnBQb0xtSjcrUEdBYXJFa1dGZFFaWXRVWURkWWFwdnJJZW5ZRmlPb01nOXd6RDVNRFpLL2l0UDVUZitiL2xxMWRuWGo5MnV2SmhJRGxHZDFlYndlelhHZFRlUnVnTVdhL09jRGlqQmp3eUo4bXBNNHlmQ3VzTXBPc01DVkozNjlJWjhPc00rSFJHN1p6VlZiNmhmS05mZmU0RWZ2dTdLK2N2VFY4NDYvL0g1OWJvNkdqRE91c014amUyajdqT0VFeG5zUDJCQmhGcDc4bTExeG53NlF4WnQ4NFFUdDJGWDJlb3F6T2RRWHpqRzJhK0dSZEdvMjgvVmY3Z3hFZXluRTBlTWVEQmdaS3JNMlJqZEFibkRLUnhob2ZYSVVNNlE5bGJ1VUpFSXRHSlIrR0pSM1ZSeGhuWTJQME02QjFrUEtkekNGN2ZHc1NLdCtMaithdmlCNjh1NmMvcFNSOWJlMHROMGMvZzlob2ZsWExwREJLUERkWVptckUwMzZDSXpwRHlydHU3dnZ4WjlpZlV2L3MvUHA2Y1dzN1FHWVRWRVJBZEduRVZnbG4xdjEvRnIxNmYyVEdVOFFrTjFiVmxORU0vZzl0cmVLNGtjOXliNko2QlQvZFNuVUh1VGFCcWR2VXp6S0JyWG81N0RlSWd5ZC9yNEpsL2NHL25yMzFsRjNYSnNiY25mL1RLRkYrYjhYbXRLY09kSDdkVFQxMmN2K051Wkk2SnFZV3FxdlBjdXpuM0pscUxaTmliNWlONkh1UytmelQrdFgwVXJiWE9FRDZkZ2JwMUJ1dzZPdEJqKy9hQnVQc2tRLzBNU1RXZHRqZGxFUDQzOXA0NHU0Q3NzYndVLzhiWCtLd1JPbU90K2hsRVp6QnRFTjBVbllHNmRRYkZVRDI2SDZqMXFidTIrSFVHRkFaanI5THF2cUYxaHZHb3NuZHlEcGxqYVdsNWZJWXdlUU4waG1RK1FyYk9RR0dkQWVPajJpYzErWFVHQXRWNjlUckRWRi9aZ0g2R013N2YxaDFBem5RR1JRN2ZvRHJENHNpVmNuYWZkSDUrV2ZYeDBHQ2RJZXZWR1NKZFo5RHFVM2t4SXR6Rk9FTVM1N3J4eXpqajV2WXpuUGpZdWIyenB5dWkwYU5xc0k4ekRGcDdVRTYxT0xLbkovdk5RV1BqOCtUZUJEN08wUGFLREhzRFB2SnlCdXg3c2V4K2hzNVM2ejAwMFZyb0RQaDBobHlqZm9hVDkvRVo3cnVqUi9qNkdad3pvSVc3ZHdUdGhkaTNKL3VkUVdjK25HaUV6a0QrZXhOWmJ6K0RhUVBpb3dqcnBUTkUzVG9qZVV4MHBjNGhzejFzUEhpa1cvcjZHWnd6a1BCNVlGZzZ3OWdMZWVmK2pNLytLWmZsaTIvY2FJVE80SnlCTk01ZzloYlFHVVFMZ3Ztb0ZLcGhEZFladW9LYS9FTUJuU0c1enFBNTVGTU1uN3lyeTY2N3JzN3dJN2ZnMkp3Ukg5dmFjTS9oUHFTTzhiSHBWMDh0TjFKbm9GNmRrYU9mNFdqQlpGVkVPVVBxblNxdU0yUzZ6aUIxRlBYcERFbDBCczBoSDNNY09kRGwweGxnT2tNSWliVGg1WXo0MFpPUERIWjNaV2lPQytkR2oxOXNxTTRBOFZHR3pnRFRHVWpYR2ZDOTZ6MnhOMnFVemxqcmZnYmJYaXVIbkRHOGMwdWMzNDdPMElWSVkwNGJMbWZVbnY5TG44bjRuNWF6TS9QLzc5aTFoY1c2ZGNaNjl6TzRqNHk5MFpycUROU3RNeWdHVjJmUVVQZU5xQzM2Qjcrd0o2QXphTjBGTkc4NXcrR015ZzkzN3UvNjRoTTdrRHBPbjd6ODAvZktUZFRQa1BCelpFUndOMXBubUJvbTY5RVpDT3NNa2EwWS92RXZqWHp6Nys5TDF4a3FWRUlNWW5GRzVmaXRmM1FBcVdObWV1NjF0MGVQblN3M1FHZkllblZHd1g2R0NrTGxJeldmZkpaOWNaMkJkSjJoYTVpeWhHNWk0WDZHbHpORVdtWDRwUzhOZmY5MzdubjhhRjlJWi9qamxieHUvYjNKdC83aDdaKzZKMDJLbHN2bGQ5NDQ5OVRMNVNxeVZlc01rY1laYUZ3L2crb01hazYwR3AwQm44NVlxMzZHbHpQQ3pGRWJkeC9zL2kvZk9oSi8zWDBnK1IvNGdtT1FUdFRTMTJuRitlZC9kOTlYdjdnTHFlUDQyeGVPbjU1NjZXUVpLS296a1AvZXBPSDlERmRYMVViVWNKMGg2dFlaeWVOOE9rTWdJeTdJZVB4by8vZS8vWW5mK2NiQm4vdFVQOVVaa25Tb2ZNUG9qTy8rdTN0LzdTdkQ2VmM1Zi9icTJUUFgvdk1QVjVxdW4rRnlaQTFEcWNFNlExZFFXc1B5Nnd5WlcyZElwRlVVMy9qaUU5dmpyNG1wcFIrOVBQSFVUMjc4bjVkdUVFYjFqMGNmN1AzYWwvYzgrZWhnNXNrdlh4cUxhZVAzZjd4eXJ2YXBnSFhyRE5Tck0xYlJ6NERLRmpPcWs5TGV6M0ZUM3AraDc4ZUVZaGN5WHo4dVUzWXBOQWI2MnYvSzUzYkVYL0hqeWVubDZkbVZ5ZG1WdmJzN3JHbC80d3Q3L3NuWERnNXQ2OGh6emcrT1h6eHo2c296YjY1VS9nUlhiUlZFRVh1bDVrNDIzNXdIRFhoL1JxcC9QVDRxTlVzL2cvSXR4VnlZUU1qbzd5M0ZYOTVxOGNsN3N0L29oZXJ2NWQ5ODljUHIxeVpmUExIeTM1K3QvdmxrQVoyeFVmb1oxQ0xxbzdidWdkM0NWckJKQlFyckREcWY2Z3lWMzE2ZFljV3YwZXJDMWhtQ0t3eXVNL2k5akZoWm5MdHphRDZLb3E3dURpRldFU2tGeDhwSytlTDVhMisrY21aNmF1NFBuMXYrNCtjMVo5QU1wdnZqMkt1NHdXY3ZsTDB1WjVBdENlc000ZmVSNDE5TFozQ2VMalZUUDhOc21xblc1VEt1WEI2UHY5cmJvNzM3ZDI3ZDF0dmYzNzJsSzFjNXFIdGNPbmZ0MU1uTDgvTkxNL1B5UHoyOS9QN0YxZWtNV2EvT2FGQS9JeG1VdDJySWQrNDltcWt6VVBrem5yWFVHY2wrMlRxRHg3TC9mYUJ4YytIKzI4VWpSK1FuYmhPbFJGNmpzN00wdUwxdjY3YWVPRkI2ZWpzN09sY2JLM0g1bUpxWUc3OHhQWDVqWnZ6NjFOSnllWEZKeG0zUVAzMTVaWFkrdWVkYXZjNkFkUjZQenFqdVE2TjFoc01aeVJOaWFOOVJHckk2NmdPN0pObXBvSmtLU0ZHRzVBSlNwUlpJZFVpWno2L3RSSko2SWY2aHE3M3lkNjEzak1qYmRvckJYbFpmU20yaWY2Q25wMjlMZDA5bmQ4K1d6czcydGxMY1lSZFJXMXZVSnJ6LzF1ZlNoZEhKOGRuNStjV0YrYVc1dWNYRkJmWXhVRDk1ZStWN3gxWUNieGFVRkp5RXFhOGFlVDMycWsweU5Mb0FBQWN5U1VSQlZMcVFNdCtzQTVFRGt2b0kxczdaR0txekRaRXA1dkRwWG5ZOWJ6eEs5eDNWMXZYUzR0Zk9KQzluNkNoMGM0aGhvS3Y2dW5CNEdBZDNZZjlPREEyS2dlNE1MWEwwb1VQV1p5Mjg4c0pKK3NjcGN3dnk3RlY1NW1ONStuTDhWVjVZTXNnZG5aSEtxZlZ6aHIxN1ZpWEszSjk4bk1GV2xlclVHYnFDMGhxMmx2ME11KzRhbmE4cUlGazFOWWZYVDFlK3FpY29kNVl3c2gxN0JyRnpRT3dlUkg4UE9rcWlveFFmSy85bHNLdlRFenJ2bmkvLzhLWGxpV2s1UG91eGFUa3pKN1FXVnRrQzBnTnQ3bjZHRDNsbGZpbWtNelphUDRQcWpGRCtTWE1YQnpwL1lVbCtlQVZuUHE1TllaVzdOdm5QdmkySGVIQ2N1SWhuM3lXWkJ3L2JiWnAraGg5enpCek4wczlJY2dpVU0xVGFtUGtNZzB6cDN6ajM5OWJRUGpNOFI5aVJjRWFTZnBvbzB1eVZHN1NmSVlqa29OR3BQc3ZlQ0JpelAwaFl5TndydzdCY0RZZXZuNkdZb0paYlV0M2ZneWtza1d5dnRwWmlNSEdqT1Vsb2hxeXRNdjRBdmIrSHdnem1VY24zVHFjcXdXd053K1NnZDBZd1BWbmlKMVhkNExkWFJZQVFycjFROXJMNWFzOUI3S1g3bysyVnhGNlEzNXQ0N1dVK2d2R1IwUE1UZTVXUFNzM1N6OGpVR1RDTkJydGFCM0pJR3N6T2tGd2h3Y01aeFhXR3JGZG5ySFUvZzFoS2ZSU1pIREx4eFRpamxoUG1oSnIzT0dkSUZvOHNod1RqRE9WRlAyY0lXcWNVVmk5bktHM2tZRkQ1QnhIa0RCSUNDRE9IcVdVV1oraHJpUXg3VFgyaGdlUG5ESmo2QmRJL3BmYUMyRXQ5SklYckkyTXZQUFpxWHRmc0NNcVJOV2pKeDVYclBmTG9ERm0zenJCcVdMSktYYy9QR1V6aCtuUkdvcjNKZklhaG1NN1EyZStNVmVzTXpobEk0d3htcjlRY21ha3paRkdkUWZKUThrQWxLcHY0eU9yL1NHVGZLMlBqOURPZ2VDKzNWaGNtRTRUT2UvbEgzenQxOUJEN0M4ZlhqeS9UNml2dHZOYzZyTmk5aVRZeTlkNEVxZllHOWdleVdEOEQwdStqSkc0cU02M2djSFNHcVVhb1IyZkllbldHV0FlZG9YTElReHhvbU01QXZUcGpIZnNaekVlRTE4V092UTlzbW41R0ttZUVNSHZaVWQ1Uy9ReUNoMkdPMitjUDZ2T0FhSVVFaXlIdndIQVlYcDNMamlSM1BudGFhUVY5SHFsZUlFOEhJTkMxN1BUc1RHd0ZuNi9zRFdCbWx5S2xLV1F2ZXlHSHZZbUtUSnRQbDBvdGt5VDFFWUwyV2o3S3RGZk5qeFErZWF2ME02U0UwMHVBcnRtM1pEOERnZnZIR25PWWVKZE1Ob1V5VDhjWHl5RjFMTVlaTVBIaDVZdzBER3hWUWM0dzloTGtDSmpLcG5yczVTdDlnS3lYTGVSZ1B3UXg4THBBTFV6eGtSZDV5RWNhZWVWeHBPTVh0MFEvUXhCN1FYUStmSnlocnlVeTdFMHdLM3NGVWpnRFdnTnFQU2dzZTRIMTdXZVErVnB6b01ZY0QxamhWVmhuNUs1aDl0UDAzc212TTVES0dhdlNHWm9kVjZjemZDdnoyRnRBWnhqTUJrNU9uVkdkcmVjWDVmVkkxekJSdDg1d2ExaCtuY0Z5eU5VWmNzMTBCdWtOckVwbmNNNEFVamlEMlZ0QVp4QXRDTXRIV1RvRFJtZUlmRHBERWg4cDVyQWpNS1dHSVZCM2IyMmRrV0d2RE9xTTVOVVFCcFpjY2sxMGh1ZlV0VlVSS1RGUWRhZ3VuU0g5T2tQSy9Eb0REZFFaMHNjWmE2Z3ptTDNKUmdSMEJwak9RTHJPUUU2ZElSME1Dcm1sTTBUUVI5SmdxRjFGN0J4NVFOYWhNL1RUZGVtTXhINi96Z2hpV0wzT2dFekZ6QzZWb2pNMld6OGorZEd4TjZwVFowRFNxN2I2R2VrNkF4dTdueUVCbDJrcXoxV1pRNmJVZUxSMFJraG4rQUJaTDh0bTZHZllUNnRWa2VhOVZqK2pzTTRRU09FTU5FOC9RMjlEc3JlS2FjU09rZnNSR25KMU5Vdy8zZXBucE00MzYwallvSkRPd0tyNkdXRDJHb0tydkltaDFjOVFTMi9SZmdiVkdkUkhBZWFRTFowUjBCa1o5a28wWVQvRDBna2FiTVNYMDNnTTFkMVdQOE53YW0wakFqb0R6ZExQb0V4RGZlUXdoK1E2UXo5ZGw4NUk3UGZyakZBYVlmVTZBeklWTTd0VWlzNjRWZm9aSG9JVGxEbFVqVWVybndIT2tacm5tTDFROXJMNWFNNStSb0RYS1hQSWxzNEk2QXdmSU90bDJjejlEQSt2VjFkRnJYNkd6TlFaQWltY2dlYnZaN2lja1JCYWhUbms2bXFZaWNkV1B5TnR2bGxId2dhRmRBYldwSi9oWERiNUZyWDZHVnczY000QVVqaGowL1F6R0djUUg4WE1jUit2WGkyZGtjZGVpVTNVendncHBNaktJY0Z5b2pLc2VHejFNeHlkZ1didlo0QTRnUHBJN0JpK1Q5cDF0OVhQeUdkdkFaMEJZT1AyTTlRUDlvaWtXM2VMNmd5b25HajFNNEk2QTVMcERCVFFHV3ZmenpCc3B5RlU1eHZtYU9rTUx5RHJaYmtaK3hraDVKRnM5VE0wUndxa2NBWTJiei9EQUJER1I1WFZWZVpvOVROeTIxdEFaeGpNQms1T25ZRjE3V2VFN0kzcTFCbXRmc1ltNm1kWXlMVU9TNWdEZHZEY01qb2p3MTZKVzZDZllTTlhVNkpXUDRQVytOcEdCSFFHTm1zL2crb002aU94ZmZnVDRHQlQ2aTZMTEwwaDVtbi9XTDNPZ0RUbldZWE9hUFV6Z0RSZXQzMFVJYi9PTUpIVjZtZUVkQVlrMHhrb29ETnVYajhqNUNQQ0hQS1cwUmsrUU5iTDhsYnFaOEM2RjFPTG93Qm50UG9adDFBL284YXBybytxekNIVDZxNXM5VE9rM056OWpCQ3ZSeGs2bzlYUHVBWDZHU0VmS2VZSVJwYVhNMlR6Nll4a1VYR2RrYndhd3NDU2k4QUpyNUpGZFlibjFPNnE0anJEOFpGajl2OEhBQUQvLy9XSGZ3Z0FBQUFHU1VSQlZBTUE4R1k0RG94NVc2Y0FBQUFBU1VWT1JLNUNZSUk9IiwgInNpemVzIjogIjE4MHgxODAiLCAidHlwZSI6ICJpbWFnZS9wbmcifSwgeyJzcmMiOiAiZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFMUUFBQUMwQ0FJQUFBQ3lyNUZsQUFBUUFFbEVRVlI0bk94OWFYQmMyWFhlZHg4YUFMRVRYRUFTSUlmRFpZYXphQlpLbnNrc0htdUpweFFwU3BSRktWdXBPQlhac1NNblZWa3ErUlBGcmloL1ZFN0ZsVXFsckRqNUZWZEZUc1dKYmNXUk5SazVta2pSYURiT3ZwTERJVGxjaDBNU0JMSHY2SnZYM2UvZWU4NWQzdEpvZ0dpd2I2RWVHdDMzdnZlZGU4NzV6dmNPR3VqU3lPRlBDeUVBQ1FncFpmeFlIY3Zrc1JUeHE2Z2VwVVF5UFQ3R2owWHRXSjJwbjJEejZmUFcvTnA1blBuMENQMFk1RVJRd3pjZmRGV3lsczhuR095ck9QYVcyWFhwMmhyOC9QYldFS1RPNTVpclY2aThVQWE4UGdyc09WTHM5YzhuTGpXWVN6b3k0cVBDVjVsU3hZMGtHaW96MUZFa0ZsYVA1bEpKcUNSSGdsSlVWeVpITmo4eGdjeW5HSksxMWUxUG5GdjdSandON1p2cWZCNDh5ZjVLZTc2YXhPeE5MUFhaUzJQQ0dNa1N4T3l2eHB3Z1ovWWlaQy9IYktKWjI2czNuZXlQM25PVkxBYXoxMTR5SDVhUGpDc1k1b2pzWURVYWFwN1FlNTNZQUFHaFE1RWRrNXhXT2FUMlNPOVhFazVrZnJJcWlaakVIc0V3SkM2QWlsUVRpMlFrWGxTWXlVNVZWMEdxdUFkRlRuWmZrUHl1MlN1SXZYckRhSHlvU0dXV2F2ekpLc0VTSlRGRzdYN0lYb0k1Y1NDelZkbHJmRVR5b2JhVytNaHJyekE4cC9BcmV3TStTcGpERTQ5dURxbFFCRmdtNlFpUTNuaDBPS09HUU1DT1g1cjloRFAwRHk1bldNZ3R6b0RGR1lvdEJDUmY1ZWRJaXgzaDJHdHhNdUZJNmRxcmM1L2JLN1c5bk9jczVJb3o0UEVSc1JlT3ZhWU9nUEc2cEQ2U0lSOUZQQjZKaHlobk1KSlQzakk1WkdXU3FxOU9QRXJEQVhZT0VROUI3d0loUVNGWlNsaVo1T1VNZXo3MDd2UDVQbnVOaDZTSE0yQmxudUVNTU00dzBlbXhsMk9Xa3RUMzZyWElwbXRMWVRqRDhEUVVjbys5QkxQdytnaGVIeVVZeE40N1BxMWRBSVhPamtGckpQYWIrY25UamhvaTg0V1REZG9ma2x3WEJJUk1oU0NGOEo2ZW5jbkdBTWtmWm1IbW13S1B2YkF2Sy9MWmEySDJ6VGZyWERqSmRKbXlRWFJTZlQ2S1pKMDZnOFVqc2pnalcyZW9rT09jUVhXR3ppRW9yVTVQdnpZNkEzNmRRZkN2cTg1QTNUcURZa2pWR1FBMDhyYUI3YmRySXZESGxQYVFxYjY2T0poVit0NGtlUUZPRFVPZzdpYm85ZWxDT1ZUMW45RVoxdWtGZ3NpcHpvRFJHZDRjc25VR3VMMzJ2Ui9mQ0J0NVFHZm93RlB4aDVDOTZrN0tRWjVtcjduL29uVG0yQnZ3RVgweHlxTXp2SnpSWUoyQkZNNm9uY3pLSkM5bjJQT0p6bUQ1Nm5DR2NOblJjQVpRUUdlUURTNnFNNUN1TXlTSWorclNHZkRyRExybjlQNmoxT3BuS0h0WmV1b2pFeEtidEo5Qjk1ek9qNHJvREprV2ozWG9ET1VJdFBvWk9xQVlPNjVUUHdNQVJhN3pwK1RKSVJXS3BOd0JyWDdHNXUxbmVKQlhmUlNGZEVhcm4xRkFaMmdmaThJNlE1Sk52MW45RE1vTEtwNHEreU5HRHY4Y1FpT3hQOEd1Y2RtNmw4MFhUalpvZjBoOUhxbGVTUFlYS1JCYS9ReDR6TFR3UzdPM0ZNTXFmUlFoUTJld2VFUVdaMlRyRExnNkk0bGZnNU53UnF1ZlVVeG5VQXhGZFFhMGp4SjdBOHhCT0VOYklPcU5SNTE1aFRqRHlqek9HYUg1eWx0VUxJVXdXNWJhOXZKK0JyOUlDRGxiUlFKUGYwTVFPWUZQa0tldGNuaTlQaDhSNUxhUEloMDh5WHJZbk5GZ25ZRVV6cWlkek1va0wyZlk4NG5PWVBrcVcvME1QMmNFZFFiMVVRbm1ORXpITXZwczlUT2NleFBqTVkrOUhQT0c3MmZRMktJK2l0eE1hdlV6Ym9yT0VIWHJERzF2SFRvampkY3J6Q0VBbGtrNkFxUTNIb1UvSGdYcytLWFpUK0pSLytCeWhwVkpGbWVnMWMvQTJ2UXpIRjVQZkJTMStoa0ZkSWIyc1Npc015UmgrbzNXejNBNE12RlI5VzRsc1QvQnJuSFZkMjhDbGFtbUJ1aGlIaDZ0Zm9aVUJCZFlKT21rTmZNUktJYklHNC9JNG94c25hRlNEcTEraG0zdmh1dG5JS0FGMi9xMzc0Y3BEcEM4anBvWDROUXdCT3B1Z2w2ZkxwUkRWZjhabldHZFh2alR5TllaTURyRG0wTzJ6a2hPN0VFT2hUbU1QS0F6ZE9DcCtFUElYblVuNVNCUHM5ZmNmMUU2Yyt3TitNaUhQT1FqRzBNazVkcm9ES1J3UnUxa1ZpWjVPY09lVDNRR3kxZlo2bWY0T1NOWFA0UHFEQm9kSlVhZmFQVXpDQWRvZXhHeWwyTnUybjRHU0M3UkNJMkM4VmlIemxDT1FLdWZvUU9Lc2VNRzdXY280MEUycitybmtVTlBKSmxVbCs0MU5VeW5pdjJEZDBqYmZaSmk4ODVYM3BLdWhBaXM0cE5DeUsyTDVMSlgwaktkYlNtQmI4SEpRazdtMStFamdweGZOd2R5cWQ3UGdjYm9EQUcwK2htRTZadWxuK0h4VWZWYU5lWm85VE95T2NOaXUrU1ZjTDc2TU92cE1tV0Q2Q1NPZWEzNkdhRzFVVHBuWk9zTXVEb2ppVjl6TGNJWnJYNUdNWjFCTVJUVkdkQSt5dWhucU0walRFTTBSN0Y0VEsxaEtVTmE1aERPQ00zMzZveEFEaG5rY0drb1cyZjRFVFJDWnhEa2FhdmtodEFabEVhalZqL0RzQ05DOW1ib0RKMTcxRkkwVHorRDZneEtveVdpMUFCK2I2MU5idlV6R09aTjE4OGcrY2JzalZDSHpsQ09RS3Vmb1FPS3NXT1Q5VE5ZMWhGN3hmQ2huelZZYytvTXlSVitWdldWRGRBWnVtWjdGOVdyTXpMdHJWdG4ySEN5a0pQNU4xZG5VQjlGTkI1Yi9ZejhPa01TcG0vMmZrYUkxNnZNa1pwRFVEWFBGNC9CMGVwbkpKdVA0QWJSU1J6emV2Y3pFUEJSUkVsZjV4eEkvS0xWejhpdE0xQzN6cUFZaXVvTWFCL1YyYzhJK0Vnemh5K21VbXRZeXBDV09TUWVRL085T3FQVno5RHoxMDluMEZWUnE1K1JYMmZvM0tPV292bjdHU0ZlYitzZnZJMXNsKzkrRnpxOEJjS1VJZGp0SkkxSFg0TFQrM3R5TFVoWTkvZStDekRPRUN6LytIdTZKRVdlcktVZVMrbG53Szh6dE8ra0I0NUlvMVM3bjRFaTl2b3dLNTBPYmk5MW1FR3NNYVRaNi9nbzBqa0hra05vOVRORVhwMGg2dFlaMnQ2YjNjOGdQaElVc3hnKytEam9WWEVyOWpQK3d6ZjIvL3dqL2ZUVnYvT2JaNTU3WXpxQW5NSzM0R1FoWnp5M0VYVUdYUkcxK2hrcHRRQzNSaitEUmdiMVVjbXV1M0IvYjJJOEJMY25iNjdCYXBqVUVjRG5CM1ZHK3U5TklHbU5ZUFNKQnZ6ZVpQL09NdmdZMlZaVzltcmYwZC8xU0N2L3FQODg5dm94ay9mcTF2eGpZVFo3N3ZqSXRUZkZSd0dkRWZTUkNyZklycnR3ZFVZU3YyYURDV2Rzam40RzBvYkZqcHV3bjBFeEcxNDN6R0U0QXlIT1VIWUxIVittSXRqeDZPeDRNbDlBOGxWK3pvQ3hsZ2FzK2wweFUrdzZoOEE1d3lEWHVjOTF2c0xncUU1ckdONXlrWU1qWi9aYUhBTzFpdWdNZ2x4d0l2SWlEL0c2c0h5a05vOTdOc2daRXNSSGxLZWpWajhEUWVaZ2xtTHo5ak5jenFnaEwxRS9rWGkwMXBqQi9ab1NqM3ErcFROa1hwM2hjSWFFbFgrcjBoa0djNUE1TEhhc1YyY0ltKzBBbUp6MWM0WjAraG1XdlRVZkNUS2ZZU2lrTXl6TzBPeFljckpmMFBzQ0dobGFZV2dkYXEwU2dsODF5UjcycWp2ZmVObzRuOFlIV2NXcWlZM0JpcW9rcU96NURFTnZsN2o3UU0vaDJ6cTJEVzZ4NHVMUFA3cHRjRnYzOUt5Y25GbWVuaTFQVEsxTXp5MlBUNjFjSFZzMisyRGRoZHIyT3Z0akk3Y3Q5U0FQNzU0VlZXcnozUGxlSHlubXNQZVpYU1h1Y3p4bUpoTVh3VDhrSFBmcDV3UHppYzNHY2dpM1RyTmROcFBJdVZiYno0aGZIQmxxL3d1UDl6L3h5ZjQ3OW5VTWJlOUE4VEU2dnZUQnVmbDNUOCs5ZTJydWpaUFRGejVlOGlBbjhHbU13bU9wQnpOQnpyY2hoNC9ZS3R0SDNsVTBWZ0Rxb3owSEh2UEdveVJNbFRzZTJYeWU5d2h6aHFDZm81YTJOb3N6REdabi9zNXRwYi85cGUyZmU3ai96djFiME5BeFByVjgvTXpjOFEvblhubDMrczllbU16QXJQSTdZRy9aNXJtYzltb2YrZWJuODVHSDE4V2VnNCtSZUF3T3BXVnFqM1BFb3k2MjdHRldEbGxKcHg2cUswa25oN0k1WTkvdTB0ZS9NdlNsVHc5MGRiWmhMY2ZGS3d1ZitlWDM0TUc4VWQ2ZjRWbUJOQitWRUtoaHRaVkZPV09qNll4LzlldDd2dnFGN1ZpWDBWRUN2SnhSVkdjRUZKS3JCUnV0TTJ5RlZNSW03V2ZjZjdqcjMvNnpmZnVITzdGZW83dVRHdEZNL1F5Ky9jWkhKWGc0b3daZ2xUb2puVFBFbW41ZTY5ZSt2UDBidnpLTUhHTjZhdTc2MWNtdDIzb0hCbnZvODZkUGZoUmo2TzNkMHRmZjFkUGJoWHpEeHhrZW5jSHRUZGNaT2JSZ2JwMFI1Z3kvajBySkdzQ3FmeWJ2bTYyZjhZdWYzNVlaR1NzcksrZk9YTDE0NGZyY3pFTDg0OUdIRGxrVGJseWZ2ajQ2Vlh2YzI3ZGxaTi8yUFNQYk9yZGszZDE0T0FQSjBjOFpHNktmRWZKUkNkaFUvWXduLzF6L043KytCNmxqYm5iKzlaZFBUMDNPeDQ4L0dzTzc1OFdkOTl0elhqd3BqcC9DOEtEWXUwUHV4dno3NzEwNmRlTHlvU083Ynp1d3E2MHRDcDdhejNZNWRFWjQ5NnlvYXJUT0NQRjZCUnhoRGhLUGpkTVpXQk9kWWZLUFZldmhIUjMvNXAvdVRYTWVjTzNLeEZ1dm5abWRYL25obTIwdnZoK05WZCt6OGZmK3BqM3Rvekh4ZzlkTE5ieTdCc3FQSE1IRGQ2eXNIUC9vNHZuUkJ6NTVzSDlyai9ma2VuOVJWR2VJbTZVenZENUt3RVdTMjZhT2dvZHM3VDVXYnZEM1ovekdyKzd1MlpKMnY3cTRzQlJIeHVYcjVkLytuMjFQdmRwMmZRcko3eEdjVWJVelFYNWxJdnFUWTlFMy82RHQ2ZGN3UHI3d3dyTW5Qcm93NmoyLzRtZDFCbW15TnJHMzZpZmpBeE5QWVBacVpxMys0UEVSMlIrZmp5UkNQb0xhN2FDUGFzc3FoNUpkdzh3MXNtdVlvek9RVjJlbytEVTZ3OFJCbmI4MytjelA5RHo1NkFCU3g1a1BQbjc5dFB5OVowb0x5MXdiT1lQNnJ6YVdsc1gzWG01NzRYajVsNStVcFhjdUR1L2I0VjhsL0RxRHhvcjl1eDZ2dld3KzkxRVJuU0Y4T2lQVlI3VmxsVU1FYUxZd2FnTlo4VWl6bnpPTlRMSmZyT3Y3TTBwdDhsOStmUVNwWTNabS9wMzNydnplTTFFY0dRUnppRGw0eUNoN1I2ZWpmLzNIMFkvZlhwbXRLbG5QS21sekJneG5HT1NxK2dqQzdRbmJxMFFCVk5pcXpTTk1renoyK2toUXpCWm5rTzJYenUvRHJWV1Y0S2krMWtpZHNhNzlqTnJ4ODQ4TmpBeGwzRXBjdmpRV2w1S0Y1UWlzN3FZeEI3TlhlUzQrL05IelltSjgycjhxdjg3QXpkSVp4bFB3Y0laYXBmNzMrV3AwaHBDMnpoQWhuUUZMWjZpNHlhVXpqSjhzanFuczh1TVArQlVpSFpldnpqLzdYa1RxcnFEdUN3MUprR3ZLVzF3V0Z5L1B1SlBEbkpHcE0yUURkWWFYTTNMcURCT2RRa1MyZml5c00yNWFQNFBXM2NlUFpnZkhjKzhzQWlTT3RkWVJhYXNFeDZEZDkrWUpUM0NFT1dORDl6T296cUIxM0h5V2ZjNTRyRjluQ0wvT0VLaFRaMmdNN1NXeGUwZDJtL3lOOStlb3ppRDVFS0FPeTk0RWZtTHY4Mi9OTHErcytGZUpzTTZRVXFUcERMbG1PaVBFNjlZcUVxa0NVWU4wQnRhem4ySHlyNHBoejg1MmtaNysxVk5jdmk1aGNRWlV2bm9IMXhtU1Yrc3pINHZKY1ljOFpKYk9FRGRMWjNoOTVORVoxTjVJMXFNejRNUWoxck9mUVN0Qy9IaGtad25aUXl6SWRxTXpBTTN0akIwZFQydk1nckdkaURzZFk5ZG5uWXMwWlQrRDZneHFiNmt1bllHOE9tTU4raGx1M2IxOWQ1N2d3TjBIdTU5OWRWcFk2UjJNRERDZEFadnQ0aCtlZXViU2tmY3Y2Uldqa3pVWGdPaUc1dWhuaEh3VXlUWFZHZkRyREdDMU9vTmlIdXhQNjVmcjhiUHhIWTNoWjZra1FhaW1nT2tNaXFGbXI4VFpxMDVnZVhVR0ZHWnMwSDZHNUx5dTdTMkorblhHVGVoblVBdzZYcGNXbDVCalBQWmduNVJYQk0rOEZPYXdkWWJ4ZElJODdxbi95VEdlQ2ZBaXgwM1NHY1pUUUY2ZFFlMk5tcXVmd1hKSUpqazBNN3VNSE9PdWd6MmZmYWpQY0hXSU04elZiWjJoTkFxRWJXbCtuYkVSK3hrV1oyaDdvOXc2WTBQME0xZ09LY1Y2NlZvdTVvakhOMzk5WlB0QWlmb3ZPQ1RSVll3emtCdzVJRmRuU0RSTlA4T1VPTzZqQ0EzWEdjS3ZNd1Fhb1RMYjN3QUFFQUJKUkVGVXFUTkk3T0xNcFVYa0d5TkRuZi8xdHc3dkdPQUNWdnFpaE5wTGRFYVlNN2pPYUtwK2huUjFWUlZtcEpHUmZVblJHYmlKL1F4SnFqV3BlcGljRTB0THVTcExQQTd0Mi9LLy92MmQ3TDl4Q0Y5OW9mbEhNaS9NR1J3NVlmWDExUmxlSHhYUUdkUkhUT2M3T2dOT1BDS2tNOWFobjBGMWhpYkhlT2JFakZoZXpCc2M4UmphM3ZFZmYrUGc3LzZMMis4N3ZJWDZ5UWtQZ3dHT3p0aE0vUXcvcndPTVlEZDRQME95U0RJMVB2NCtOalk3MGxQc3I1V2VmSFJyL1BYV3labi85dlNZY082RmpjNFFmcDFCWThYRzdMV1h6V2Q3WGtobnJFVS9nK2txamRrRWg5cjNqZkErVURYZmo4SHd1ZllqeEFkbmJvenMyNGJpNC80N2UrSXY5M2tIdVcxcEllU2FVeE9XVFRaUE51aDlvSHdWMlB0QStTcDRWb1Y5Rk9tQXhJYnZaMUNkd2Z3SStjTHJFL2xsUjU1Umo4N0F6ZElaeGxOWXRjNmdQb29jbmJGeCt4bVVIUFd1MWZieHBaUGk2a2MzMExqeDE1N2NkZStocnZDOXlhYnFaNFI4MU5ZM3VCY2huVUh1NzgzZ3ZLb29rajZrOFFqK2drOW5JRTFuNktqbnZ0T0ZOSmsvT29VbmppenVQN0FURFJvanU3Wjg5UXM3SDNtZ2QyYXVmT3I4bkl2QjVqbk4vc1pTbUlxZ0VLc3RUTFVYUERKZ2N3YlovcENQekZINGZBVFhSN0NxUWVYWTFqTXdRaW9jcVY3dzlUTnNuUUhROTBiWU9vTWE1VlJyaEtxMXdRRGV6eUFqeVNGaDZpaTZTNHRIOXJmM0QzU2pjU1B1aS96Rkp3Yi8xcGQyN3QvVGVXVnM2ZHJZa28yY1l6QTh4NHhYaUxOMEJyejlERnRucFBoSXVENmkyQWhuNVBKUndoeE9QQ0ljang3T0FGeWRRZFBicWRrSTZRd0lwa3VjSERKUUpDbW1sWjhuNXNTOVE1TjdiOXVSL25jcmRZenVMVzMzM2RIekM1L2ZjV2h2NXh2dno4ek1sZzF5NGRCRUFMbWpNMUFIWnlDL2o1ak9TT1YxZURpamRySWFjeUFySHUzNDVaeVJOeDUxejhEUkpVNE8rZm9aUWxubjVxdXN0c0w2dTFaMjlTOFA3ZDZLTlJqeHRZN2MzdjByZjNYWEhmdTNuTDAwSDdOSWRaZmd0MWZwRE0xNFptOGhlSXBhbk1IbUYrY01yVVVvY3hUMGtZcVltRGxHQ3VnTUZiL1pOYXpST2tNNE9vUGxSUFdaMHgvanZ1R1ozWHY2dXJyVzhJL3I3N2l0SzJhUndmN1N5KzlNTGEra3BqMTlYRkJuQ0ovT1NQV1JPV2I1S09sbmtCZjhQdExNMFpRNkk4R2djaXUrbVoyY3cwajNSRXdlN1IyNTNnRlUzNGdpOGVCZHZYLzk1N2QvY0g3Ky9PVUZyak93WmpxRDJMc3FuU0ZUZkZURm44eFh6SkVSajZ2UUdlN0pHcVV6VFBVMXF5NWRGNGQyTFM5TjNSamFQYmltOFJHUDN1NjJ2L3laYlZ2N1NzKy9PYld5c2c0NkF3M1dHZEtqTTlRcEt5L0h6REdjcVROc3prQ1JHcVl6b3JqT29OWjVPSU93RnhUeWVMeDdYdHl6ZDJYbXhvMjE1bzhxeGdxRmZPNmhyVTg5ZDJOaG9ieEtuVkh2dmNscWRZYkxHWW81dHU3TjBCa09ad1Rqc2RFNkF6NmRJV1dJbUpLeHVDeGVPeVB1M3JzOGMyTzhyNytydTJmTi83blAwTGIyeno0MDhQUlBiOHpObDVtOVRkTFA0S2MwMTJycjJUcmMxRG9EMEZwVkw1S1YrRGlGdS9jdFQ0Nk9MUzRzYmQzVzIvRDdXMnZzMk5yKzhIMTlmL0QwYURQMk0ycEI0Zm9vWVE1bTZPcDFCb25IQnVzTXcxZ0lycXBPWFZ3UnI1OFN3OXZSS1djdm5ydFdLcFg2QjdxRUhYeU5ITHQzZEF3UGRmend4WEUwVW1lc1J6OURuVEtwemhwNWxUbDhPbVBEOWpPOE9xTTJyTG9ieDhleGsrTEd0RHd3SkNmR0pxNWNIdC9TMWRIVDIrRC9RMHJIdllkNkxvOHV2bnQ2dHJuNkdTRmViK3ZkU3Y1emdlSDJEZDNQQ0EzQk1kU2dYUndWUDMwUG5TWHM2bHU2Y3ZsRy9OWGUzdGJUdTFZczh2QW4rcjd6L1N0TGxYZTFOazAvdys4alZJTmpjK2dNV0RXZTVORFNDdDY3RUwxMkdvTjljckI3SmFhUXl4Y3IvNXFudDY4cmlocXNSVG83b2xLYmVQYTFpVlhvREdMdnV2UXpmRDZpekxGNm5VRkdnM1dHcWI0eVhXZUlZTjJ0SEtjWHhDdW40aTlzYWNlTzN2TFk2T1NGRDY4c0w2L0V0elB0N1kyODQ3M25ZUGQzbnhtZG1pbUxPblVHR3F3elpBR2RRWjNUMWpzd3pKMUFPQU5GYXBqT2lPSTZnMXFYdjU5Ukc3bnFMcVRlcU9rNXZIbFd2SENpTW12M1ZqazlNWFB1dzZ2YmR2UjJkVGZzanJlOUZNVy82SC9wN2FsbTZXZndQVGMrcWpLSGxGN09DTVpqbzNVR2ZEcEQxcTB6TW1wMlplYjhjblQ4QW43MHRwaVpsME5iY1dEL1lHT0Y2dGErdHUvODZiV2NuR0d4NC9yM015Z3QwUG1SbHpOVVpORmp3aVVrSG1IcGpPcUxFbVoralFsMFRpQlZaNERNcHpwRHIvWHBqTnFxYXJ6RHNLSzBNaU9wajdYZElmWXVMdU9adDhWdi9yNkk2Y1FhWTZOVC9uKy9rVzhjT2RDemQxZUhYMmNrUjgvKytEbURyVXJxc3ZKUnNrdHdmZVN4RjdWTnRIekU3cXFxODdXUElwS2t5VkdkM2RJWktnS29idER4S0VNNlEycWRJYzJPd01jY3RRcXFWa0ZsVXZXUytuMTFmSkd1dTVLRnE3Wlo3UUtjbkNBN1hsbTE3RkRUbVE4dS8vZ0hiNzMzMXJueE1lK255MmFQeHg3c00vWnE1TUxTR2RKd2hrSU9rbU1CbmVIWTYvcklZeStVdlpiTzBENEMzVzBrN3lHMU9jT3RTVHdlRldkSXZhZWVlQVRqREY4L1ErK2F6aUZmSFFWOE9nUFFHRmdPQ1k0QnNITklhdDRTSm5xRVU3WXVYSmN6OHlzWHpvMis5Tno3eDU1N2YycGlGZ1hIMFNNOXRKcElIMmVBY1FaOG5LSFhpaXg3L1p3aGZad0J5aG1nUG9LSzNjb0ZTb0p6QnJrR2owZnA0UXpqTVptbU15U0xwQVMzMDgvZ09XSEMzY01adHM2d01RdVRRN0J6aU80ZHdXeVBZeWZsZDM4c2YrYXdmT3d1Y1FqVHovL2srTDc5TzQ3Y3V5OS9HLzcrTzd0dHpLQTZReHB0SkdXWU0ycHIwMzBrbUk4ODlvWjhKTFhPWUQ1U3g1TGlETTNuSXVWZXc5SzlDV0NQN3BWR2U2dWpvNGtrMkh6dkt0anFUTm5nK1oyRkg3bDA3c1U4eUYzWHhzOHZMdUg1RStMNTQvTDJYZklYbjRpbmowNU56aDU5K0hCSFJ6dHlqRDM2MzVTUnEvdVJDOEh3UzB2UDBmc0luNzJwUG9MbUo3K1BHQWFyRWtXRmRRWll0VVlEZFlhcHZySWVuWUZpT29NZzl3ekQ1TURaSy9pdFA1VGYrYi9scTFkblhqOTJ1dkpoSURsR2QxZWJ3ZXpYR2RUZVJ1Z01XYS9PY0RpakJqd3lKOG1wTTR5ZkN1c01wT3NNQ1ZKMzY5SVo4T3NNK0hSRzdaelZWYjZoZktOZmZlNEVmdnU3SytjdlRWODQ2Ly9INTlibzZHakRPdXNNeGplMmo3ak9FRXhuc1AyQkJoRnA3OG0xMXhudzZReFp0ODRRVHQyRlgyZW9xek9kUVh6akcyYStHUmRHbzI4L1ZmN2d4RWV5bkUwZU1lREJnWktyTTJSamRBYm5ES1J4aG9mWElVTTZROWxidVVKRUl0R0pSK0dKUjNWUnhoblkyUDBNNkIxa1BLZHpDRjdmR3NTS3QrTGorYXZpQjY4dTZjL3BTUjliZTB0TjBjL2c5aG9mbFhMcERCS1BEZFlabXJFMDM2Q0l6cER5cnR1N3Z2eFo5aWZVdi9zL1BwNmNXczdRR1lUVkVSQWRHbkVWZ2xuMXYxL0ZyMTZmMlRHVThRa04xYlZsTkVNL2c5dHJlSzRrYzl5YjZKNkJUL2RTblVIdVRhQnFkdlV6ektCclhvNTdEZUlneWQvcjRKbC9jRy9ucjMxbEYzWEpzYmNuZi9US0ZGK2I4WG10S2NPZEg3ZFRUMTJjditOdVpJNkpxWVdxcXZQY3V6bjNKbHFMWk5pYjVpTjZIdVMrZnpUK3RYMFVyYlhPRUQ2ZGdicDFCdXc2T3RCaisvYUJ1UHNrUS8wTVNUV2R0amRsRVA0MzlwNDR1NENzc2J3VS84YlgrS3dST21PdCtobEVaekJ0RU4wVW5ZRzZkUWJGVUQyNkg2ajFxYnUyK0hVR0ZBWmpyOUxxdnFGMWh2R29zbmR5RHBsamFXbDVmSVl3ZVFOMGhtUStRcmJPUUdHZEFlT2oyaWMxK1hVR0F0VjY5VHJEVkYvWmdINkdNdzdmMWgxQXpuUUdSUTdmb0RyRDRzaVZjbmFmZEg1K1dmWHgwR0NkSWV2VkdTSmRaOURxVTNreEl0ekZPRU1TNTdyeHl6amo1dll6blBqWXViMnpweXVpMGFOcXNJOHpERnA3VUU2MU9MS25KL3ZOUVdQajgrVGVCRDdPMFBhS0RIc0RQdkp5QnV4N3NleCtoczVTNnowMDBWcm9EUGgwaGx5amZvYVQ5L0VaN3J1alIvajZHWnd6b0lXN2R3VHRoZGkzSi91ZFFXYytuR2lFemtEK2V4TlpieitEYVFQaW93anJwVE5FM1RvamVVeDBwYzRoc3oxc1BIaWtXL3I2R1p3emtQQjVZRmc2dzlnTGVlZitqTS8rS1pmbGkyL2NhSVRPNEp5Qk5NNWc5aGJRR1VRTGd2bW9GS3BoRGRZWnVvS2EvRU1CblNHNXpxQTU1Rk1Nbjd5cnk2Njdyczd3STdmZzJKd1JIOXZhY00vaFBxU084YkhwVjA4dE4xSm5vRjZka2FPZjRXakJaRlZFT1VQcW5TcXVNMlM2emlCMUZQWHBERWwwQnMwaEgzTWNPZERsMHhsZ09rTUlpYlRoNVl6NDBaT1BESFozWldpT0MrZEdqMTlzcU00QThWR0d6Z0RUR1VqWEdmQzk2ejJ4TjJxVXpsanJmZ2JiWGl1SG5ERzhjMHVjMzQ3TzBJVklZMDRiTG1mVW52OUxuOG40bjVhek0vUC83OWkxaGNXNmRjWjY5ek80ajR5OTBacnFETlN0TXlnR1YyZlFVUGVOcUMzNkI3K3dKNkF6YU4wRk5HODV3K0dNeWc5Mzd1LzY0aE03a0RwT243ejgwL2ZLVGRUUGtQQnpaRVJ3TjFwbm1Cb202OUVaQ09zTWthMFkvdkV2alh6ejcrOUwxeGtxVkVJTVluRkc1Zml0ZjNRQXFXTm1ldTYxdDBlUG5TdzNRR2ZJZW5WR3dYNkdDa0xsSXpXZmZKWjljWjJCZEoyaGE1aXloRzVpNFg2R2x6TkVXbVg0cFM4TmZmOTM3bm44YUY5SVovampsYnh1L2IzSnQvN2g3Wis2SjAyS2xzdmxkOTQ0OTlUTDVTcXlWZXNNa2NZWmFGdy9nK29NYWs2MEdwMEJuODVZcTM2R2x6UEN6RkViZHgvcy9pL2ZPaEovM1gwZytSLzRnbU9RVHRUUzEybkYrZWQvZDk5WHY3Z0xxZVA0MnhlT241NTY2V1FaS0tvemtQL2VwT0g5REZkWDFVYlVjSjBoNnRZWnllTjhPa01nSXk3SWVQeG8vL2UvL1luZitjYkJuL3RVUDlVWmtuU29mTVBvak8vK3UzdC83U3ZENlZjNWYvYnEyVFBYL3ZNUFY1cXVuK0Z5WkExRHFjRTZRMWRRV3NQeTZ3eVpXMmRJcEZVVTMvamlFOXZqcjRtcHBSKzlQUEhVVDI3OG41ZHVFRWIxajBjZjdQM2FsL2M4K2VoZzVza3ZYeHFMYWVQM2Y3eHlydmFwZ0hYckROU3JNMWJSejRES0ZqT3FrOUxlejNGVDNwK2g3OGVFWWhjeVh6OHVVM1lwTkFiNjJ2L0s1M2JFWC9Ianllbmw2ZG1WeWRtVnZiczdyR2wvNHd0Ny9zblhEZzV0NjhoenpnK09Yenh6NnNvemI2NVUvZ1JYYlJWRUVYdWw1azQyMzV3SERYaC9ScXAvUFQ0cU5Vcy9nL0l0eFZ5WVFNam83eTNGWDk1cThjbDdzdC9vaGVydjVkOTg5Y1ByMXlaZlBMSHkzNSt0L3Zsa0FaMnhVZm9aMUNMcW83YnVnZDNDVnJCSkJRcnJERHFmNmd5VjMxNmRZY1d2MGVyQzFobUNLd3l1TS9pOWpGaFpuTHR6YUQ2S29xN3VEaUZXRVNrRng4cEsrZUw1YTIrK2NtWjZhdTRQbjF2KzQrYzFaOUFNcHZ2ajJLdTR3V2N2bEwwdVo1QXRDZXNNNGZlUjQxOUxaM0NlTGpWVFA4TnNtcW5XNVRLdVhCNlB2OXJibzczN2QyN2QxdHZmMzcybEsxYzVxSHRjT25mdDFNbkw4L05MTS9QeVB6MjkvUDdGMWVrTVdhL09hRkEvSXhtVXQycklkKzQ5bXFrelVQa3puclhVR2NsKzJUcUR4N0wvZmFCeGMrSCsyOFVqUitRbmJoT2xSRjZqczdNMHVMMXY2N2FlT0ZCNmVqczdPbGNiSzNINW1KcVlHNzh4UFg1alp2ejYxTkp5ZVhGSnhtM1FQMzE1WlhZK3VlZGF2YzZBZFI2UHpxanVRNk4xaHNNWnlSTmlhTjlSR3JJNjZnTzdKTm1wb0prS1NGR0c1QUpTcFJaSWRVaVp6Ni90UkpKNklmNmhxNzN5ZDYxM2pNamJkb3JCWGxaZlNtMmlmNkNucDI5TGQwOW5kOCtXenM3MnRsTGNZUmRSVzF2VUpyei8xdWZTaGRISjhkbjUrY1dGK2FXNXVjWEZCZll4VUQ5NWUrVjd4MVlDYnhhVUZKeUVxYThhZVQzMnFrMHlOTG9BQUFjeVNVUkJWTHFRTXQrc0E1RURrdm9JMXM3WkdLcXpEWkVwNXZEcFhuWTlienhLOXgzVjF2WFM0dGZPSkM5bjZDaDBjNGhob0t2NnVuQjRHQWQzWWY5T0RBMktnZTRNTFhMMG9VUFdaeTI4OHNKSitzY3Bjd3Z5N0ZWNTVtTjUrbkw4VlY1WU1zZ2RuWkhLcWZWemhyMTdWaVhLM0o5OG5NRldsZXJVR2JxQzBocTJsdjBNdSs0YW5hOHFJRmsxTllmWFQxZStxaWNvZDVZd3NoMTdCckZ6UU93ZVJIOFBPa3Fpb3hRZksvOWxzS3ZURXpydm5pLy84S1hsaVdrNVBvdXhhVGt6SjdRV1Z0a0MwZ050N242R0QzbGxmaW1rTXpaYVA0UHFqRkQrU1hNWEJ6cC9ZVWwrZUFWblBxNU5ZWlc3TnZuUHZpMkhlSENjdUlobjN5V1pCdy9iYlpwK2hoOXp6QnpOMHM5SWNnaVVNMVRhbVBrTWcwenAzemozOTliUVBqTThSOWlSY0VhU2Zwb28wdXlWRzdTZklZamtvTkdwUHN2ZUNCaXpQMGhZeU53cnc3QmNEWWV2bjZHWW9KWmJVdDNmZ3lrc2tXeXZ0cFppTUhHak9VbG9ocXl0TXY0QXZiK0h3Z3ptVWNuM1RxY3F3V3dOdytTZ2QwWXdQVm5pSjFYZDRMZFhSWUFRcnIxUTlyTDVhczlCN0tYN28rMlZ4RjZRMzV0NDdXVStndkdSMFBNVGU1V1BTczNTejhqVUdUQ05CcnRhQjNKSUdzek9rRndod2NNWnhYV0dyRmRuckhVL2cxaEtmUlNaSERMeHhUaWpsaFBtaEpyM09HZElGbzhzaHdUakRPVkZQMmNJV3FjVVZpOW5LRzNrWUZENUJ4SGtEQklDQ0RPSHFXVVdaK2hyaVF4N1RYMmhnZVBuREpqNkJkSS9wZmFDMkV0OUpJWHJJMk12UFBacVh0ZnNDTXFSTldqSng1WHJQZkxvREZtM3pyQnFXTEpLWGMvUEdVemgrblJHb3IzSmZJYWhtTTdRMmUrTVZlc016aGxJNHd4bXI5UWNtYWt6WkZHZFFmSlE4a0FsS3B2NHlPci9TR1RmSzJQajlET2dlQyszVmhjbUU0VE9lL2xIM3p0MTlCRDdDOGZYankvVDZpdnR2TmM2ck5pOWlUWXk5ZDRFcWZZRzlnZXlXRDhEMHUrakpHNHFNNjNnY0hTR3FVYW9SMmZJZW5XR1dBZWRvWExJUXh4b21NNUF2VHBqSGZzWnpFZUUxOFdPdlE5c21uNUdLbWVFTUh2WlVkNVMvUXlDaDJHTzIrY1A2dk9BYUlVRWl5SHZ3SEFZWHAzTGppUjNQbnRhYVFWOUhxbGVJRThISU5DMTdQVHNUR3dGbjYvc0RXQm1seUtsS1dRdmV5R0h2WW1LVEp0UGwwb3RreVQxRVlMMldqN0t0RmZOanhRK2VhdjBNNlNFMDB1QXJ0bTNaRDhEZ2Z2SEduT1llSmRNTm9VeVQ4Y1h5eUYxTE1ZWk1QSGg1WXcwREd4VlFjNHc5aExrQ0pqS3BucnM1U3Q5Z0t5WExlUmdQd1F4OExwQUxVenhrUmQ1eUVjYWVlVnhwT01YdDBRL1F4QjdRWFErZkp5aHJ5VXk3RTB3SzNzRlVqZ0RXZ05xUFNnc2U0SDE3V2VRK1Zwem9NWWNEMWpoVlZobjVLNWg5dFAwM3Ntdk01REtHYXZTR1pvZFY2Y3pmQ3Z6MkZ0QVp4ak1CazVPblZHZHJlY1g1ZlZJMXpCUnQ4NXdhMWgrbmNGeXlOVVpjczEwQnVrTnJFcG5jTTRBVWppRDJWdEFaeEF0Q010SFdUb0RSbWVJZkRwREVoOHA1ckFqTUtXR0lWQjNiMjJka1dHdkRPcU01TlVRQnBaY2NrMTBodWZVdFZVUktURlFkYWd1blNIOU9rUEsvRG9ERGRRWjBzY1phNmd6bUwzSlJnUjBCcGpPUUxyT1FFNmRJUjBNQ3JtbE0wVFFSOUpncUYxRjdCeDVRTmFoTS9UVGRlbU14SDYvemdoaVdMM09nRXpGekM2Vm9qTTJXejhqK2RHeE42cFRaMERTcTdiNkdlazZBeHU3bnlFQmwya3F6MVdaUTZiVWVMUjBSa2huK0FCWkw4dG02R2ZZVDZ0VmtlYTlWaitqc000UVNPRU1ORTgvUTI5RHNyZUthY1NPa2ZzUkduSjFOVXcvM2VwbnBNNDM2MGpZb0pET3dLcjZHV0QyR29LcnZJbWgxYzlRUzIvUmZnYlZHZFJIQWVhUUxaMFIwQmtaOWtvMFlUL0QwZ2thYk1TWDAzZ00xZDFXUDhOd2FtMGpBam9EemRMUG9FeERmZVF3aCtRNlF6OWRsODVJN1BmcmpGQWFZZlU2QXpJVk03dFVpczY0VmZvWkhvSVRsRGxValVlcm53SE9rWnJubUwxUTlyTDVhTTUrUm9EWEtYUElsczRJNkF3ZklPdGwyY3o5REErdlYxZEZyWDZHek5RWkFpbWNnZWJ2WjdpY2tSQmFoVG5rNm1xWWljZFdQeU50dmxsSHdnYUZkQWJXcEovaFhEYjVGclg2R1Z3M2NNNEFVamhqMC9RekdHY1FIOFhNY1IrdlhpMmRrY2RlaVUzVXp3Z3BwTWpLSWNGeW9qS3NlR3oxTXh5ZGdXYnZaNEE0Z1BwSTdCaStUOXAxdDlYUHlHZHZBWjBCWU9QMk05UVA5b2lrVzNlTDZneW9uR2oxTTRJNkE1THBEQlRRR1d2Znp6QnNweUZVNXh2bWFPa01MeURyWmJrWit4a2g1SkZzOVRNMFJ3cWtjQVkyYnovREFCREdSNVhWVmVabzlUTnkyMXRBWnhqTUJrNU9uWUYxN1dlRTdJM3ExQm10ZnNZbTZtZFl5TFVPUzVnRGR2RGNNam9qdzE2Slc2Q2ZZU05YVTZKV1A0UFcrTnBHQkhRR05tcy9nK29NNmlPeGZmZ1Q0R0JUNmk2TExMMGg1bW4vV0wzT2dEVG5XWVhPYVBVemdEUmV0MzBVSWIvT01KSFY2bWVFZEFZazB4a29vRE51WGo4ajVDUENIUEtXMFJrK1FOYkw4bGJxWjhDNkYxT0xvd0JudFBvWnQxQS9vOGFwcm8rcXpDSFQ2cTVzOVRPazNOejlqQkN2UnhrNm85WFB1QVg2R1NFZktlWUlScGFYTTJUejZZeGtVWEdka2J3YXdzQ1NpOEFKcjVKRmRZYm4xTzZxNGpyRDhaRmo5djhIQUFELy8vV0hmd2dBQUFBR1NVUkJWQU1BOEdZNERveDVXNmNBQUFBQVNVVk9SSzVDWUlJPSIsICJzaXplcyI6ICIxODB4MTgwIiwgInR5cGUiOiAiaW1hZ2UvcG5nIiwgInB1cnBvc2UiOiAibWFza2FibGUifV19">
+</head>
+<body>
+  <div id="app">
+    <header id="header"></header>
+    <nav id="tabs"></nav>
+    <main id="tab-content"></main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="modal-root" class="modal-overlay"></div>
+  <script>
+
+/* ---- js/data.js ---- */
+/* ==========================================================================
+   DATA.JS — static game data: titles, pay scales, firms, apartments, cars,
+   interview questions, networking events, dating pool, random life events.
+   ========================================================================== */
+
+const DATA = {};
+
+/* ---------------- Career ladders ---------------- */
+
+DATA.TITLES_IB = [
+  "Analyst I", "Analyst II", "Analyst III",
+  "Associate I", "Associate II", "Associate III",
+  "Vice President", "Senior VP / Director", "Managing Director"
+];
+DATA.BASE_IB = [110000, 125000, 140000, 175000, 195000, 215000, 250000, 300000, 400000];
+DATA.BONUS_RANGE_IB = [
+  [0.15, 0.70], [0.15, 0.70], [0.20, 0.80],
+  [0.40, 1.20], [0.45, 1.30], [0.50, 1.40],
+  [0.60, 1.50], [0.80, 2.00], [1.00, 4.00]
+];
+DATA.MONTHS_PER_TITLE_IB = [12, 12, 12, 18, 18, 18, 24, 36, 999999];
+
+DATA.TITLES_PE = [
+  "PE Associate", "Senior Associate", "Vice President", "Principal", "Partner / MD"
+];
+DATA.BASE_PE = [150000, 175000, 225000, 275000, 350000];
+DATA.BONUS_RANGE_PE = [
+  [0.30, 0.80], [0.40, 1.00], [0.60, 1.30], [0.80, 1.80], [1.20, 3.00]
+];
+DATA.MONTHS_PER_TITLE_PE = [24, 24, 24, 36, 999999];
+
+/* ---------------- Firms ---------------- */
+
+DATA.FIRMS = [
+  {
+    id: "kessler", name: "Kessler Harbor & Co.", type: "IB", tier: "Middle Market",
+    mult: 0.80, reqNetworking: 5, reqComm: 5, prestige: 35, competitiveness: 0.10,
+    interviewWeights: { easy: 1.0, medium: 0, hard: 0 },
+    blurb: "A scrappy regional M&A shop. Long hours, thinner deals, easier door in."
+  },
+  {
+    id: "ashford", name: "Ashford & Cole", type: "IB", tier: "Elite Boutique",
+    mult: 1.05, reqNetworking: 30, reqComm: 30, prestige: 72, competitiveness: 0.55,
+    interviewWeights: { easy: 0.60, medium: 0.30, hard: 0.10 },
+    blurb: "Elite boutique advisory. Small teams, huge deals, brutal interviews."
+  },
+  {
+    id: "blackrose", name: "Blackrose Stanton", type: "IB", tier: "Bulge Bracket",
+    mult: 1.15, reqNetworking: 50, reqComm: 45, prestige: 90, competitiveness: 0.62,
+    interviewWeights: { easy: 0.45, medium: 0.35, hard: 0.20 },
+    blurb: "A household-name global bank. The classic Wall Street grind."
+  },
+  {
+    id: "continental", name: "Continental Vance", type: "IB", tier: "Bulge Bracket",
+    mult: 1.20, reqNetworking: 58, reqComm: 52, prestige: 96, competitiveness: 0.75,
+    interviewWeights: { easy: 0.35, medium: 0.40, hard: 0.25 },
+    blurb: "The most prestigious address in banking. Everyone wants in."
+  },
+  {
+    id: "ironbridge", name: "Ironbridge Capital", type: "PE", tier: "Middle Market PE",
+    mult: 0.90, reqNetworking: 25, reqComm: 20, prestige: 60, minIBMonths: 24, competitiveness: 0.45,
+    interviewWeights: { easy: 0.45, medium: 0.35, hard: 0.20 },
+    blurb: "Mid-market buyout shop. Wants ex-banking analysts who can model."
+  },
+  {
+    id: "summit", name: "Summit Crown Partners", type: "PE", tier: "Mega Fund",
+    mult: 1.30, reqNetworking: 65, reqComm: 55, prestige: 99, minIBMonths: 24, competitiveness: 0.85,
+    interviewWeights: { easy: 0.30, medium: 0.40, hard: 0.30 },
+    blurb: "A legendary mega-fund. The most coveted seat in all of finance."
+  }
+];
+
+/* ---------------- Apartments ---------------- */
+
+DATA.APARTMENTS = [
+  {
+    id: "basement", name: "Parents' Basement", monthlyRent: 0, moveInCost: 0,
+    reputation: -8, networking: -10, dating: -20, stressRelief: 4,
+    blurb: "Free rent. Your mom still does your laundry. Recruiters can smell it."
+  },
+  {
+    id: "roommates", name: "Shared Studio, Outer Borough", monthlyRent: 1400, moveInCost: 650,
+    reputation: -2, networking: 0, dating: -5, stressRelief: 0,
+    blurb: "Three roommates, one bathroom, a 55-minute commute."
+  },
+  {
+    id: "onebr", name: "1BR, Midtown-Adjacent", monthlyRent: 2800, moveInCost: 1950,
+    reputation: 4, networking: 4, dating: 6, stressRelief: 2,
+    blurb: "Your own place. Walkable to the office. Actually feels like adulthood."
+  },
+  {
+    id: "luxury", name: "Luxury High-Rise 1BR", monthlyRent: 5000, moveInCost: 4600,
+    reputation: 12, networking: 8, dating: 16, stressRelief: 6,
+    blurb: "Doorman, gym, rooftop. The kind of address that impresses a date."
+  },
+  {
+    id: "penthouse", name: "Penthouse Suite", monthlyRent: 12000, moveInCost: 13750,
+    reputation: 25, networking: 12, dating: 28, stressRelief: 10,
+    minTitleTrack: "VP",
+    blurb: "Skyline views from every room. You've made it, and everyone knows it."
+  }
+];
+
+/* ---------------- Cars ---------------- */
+
+DATA.CARS = [
+  { id: "none", name: "No Car (Subway/Uber)", cashPrice: 0, downPayment: 0, monthlyPayment: 0, reputation: 0, dating: 0 },
+  { id: "civic", name: "Used Honda Civic", cashPrice: 8000, downPayment: 1500, monthlyPayment: 180, reputation: 1, dating: 0 },
+  { id: "bmw", name: "Certified Pre-Owned BMW 3-Series", cashPrice: 28000, downPayment: 4000, monthlyPayment: 520, reputation: 6, dating: 8 },
+  { id: "merc", name: "New Mercedes-Benz / Tesla", cashPrice: 55000, downPayment: 8000, monthlyPayment: 950, reputation: 12, dating: 16 },
+  { id: "exotic", name: "Porsche 911", cashPrice: 130000, downPayment: 20000, monthlyPayment: 2200, reputation: 24, dating: 30, minTitleTrack: "Associate" }
+];
+
+/* ---------------- Interview question bank ---------------- */
+
+DATA.INTERVIEW_QUESTIONS = [
+  { q: "Why do investment banking?", options: [
+      "For the free coffee.",
+      "I want the steepest learning curve in finance — deal exposure, technical rigor, and mentorship from the best in the industry.",
+      "I couldn't get a job anywhere else.",
+      "I heard the hours are light."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Tell me about a time you worked under intense pressure.", options: [
+      "I've never been under pressure before.",
+      "I stayed organized, prioritized ruthlessly, communicated early with my team, and delivered on time.",
+      "I asked someone else to do it for me.",
+      "I gave up and asked for an extension."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "What is your greatest weakness?", options: [
+      "I have no weaknesses.",
+      "I used to over-index on perfectionism on low-stakes tasks, so I've built a habit of triaging effort by what actually matters.",
+      "I'm always late to everything.",
+      "I don't work well with others."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "How do you handle receiving harsh feedback on a deliverable?", options: [
+      "Argue with the VP until they back down.",
+      "Take it in, ask clarifying questions, fix the model, and use it to calibrate for next time.",
+      "Ignore it and resubmit the same file.",
+      "Quit on the spot."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Tell me about a time you worked on a team with conflict.", options: [
+      "I avoided the team entirely.",
+      "I listened to both sides, focused the discussion on the shared goal, and helped find a workable compromise.",
+      "I escalated it publicly to embarrass a colleague.",
+      "I let the conflict resolve itself without ever engaging."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Why private equity instead of staying in banking?", options: [
+      "PE has shorter hours guaranteed, always.",
+      "I want to sit on the principal side of deals — driving value creation and strategy post-close, not just advising on the transaction.",
+      "I just want a change of scenery, no real reason.",
+      "Banking was too easy for me."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Describe your ideal team culture.", options: [
+      "Everyone works alone and never talks to each other.",
+      "High ownership, direct feedback, and people who cover for each other when the workload spikes.",
+      "No deadlines, ever.",
+      "Whoever yells loudest wins the argument."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Where do you see yourself in five years?", options: [
+      "Doing the exact same entry-level tasks, unchanged.",
+      "Having grown into a role with more deal ownership and client responsibility — whether that's a senior banking seat or the buy-side.",
+      "Retired.",
+      "I haven't thought about it at all."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Your boss asks you to redo a report by tomorrow morning. What do you do?", options: [
+      "Ignore it until you feel like doing it.",
+      "Prioritize it tonight, get it done, and confirm with your boss before the deadline.",
+      "Tell your boss it's impossible.",
+      "Do it halfway and hope no one notices."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "You spot a typo in a client-facing document minutes before it's sent out. What do you do?", options: [
+      "Say nothing, it's probably fine.",
+      "Flag it immediately so it can be fixed before it goes out.",
+      "Send it anyway and mention it later.",
+      "Blame whoever wrote it."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "A coworker takes credit for your idea in a meeting. What's the best response?", options: [
+      "Yell at them in front of everyone.",
+      "Calmly clarify your contribution afterward and move on professionally.",
+      "Start taking credit for their work too.",
+      "Quit on the spot."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "You're given two urgent tasks due at the same time. What do you do?", options: [
+      "Panic and do neither well.",
+      "Quickly check with your manager on which one should come first.",
+      "Guess and hope it works out.",
+      "Do whichever one is more fun."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "How do you stay organized when your to-do list piles up?", options: [
+      "I don't, I just wing it.",
+      "I write everything down and tackle it by priority and deadline.",
+      "I ignore anything that isn't due today.",
+      "I ask someone else to keep track for me."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "Your team missed a deadline because of a scheduling mix-up. What now?", options: [
+      "Blame a teammate publicly.",
+      "Own the mistake, fix the timeline, and put a process in place to avoid it again.",
+      "Pretend it didn't happen.",
+      "Quit the project."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "What matters most to you in a first job out of college?", options: [
+      "The shortest possible commute.",
+      "Learning as much as I can and proving I can be trusted with more responsibility.",
+      "Doing the least amount of work possible.",
+      "Free snacks in the break room."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "How would a close friend describe your work ethic?", options: [
+      "Unreliable and easily distracted.",
+      "Reliable — I show up, do the work, and follow through.",
+      "They wouldn't know, I never talk about work.",
+      "Lazy but charming."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "You realize you made a mistake on a project after handing it in. What's the right move?", options: [
+      "Hope nobody notices.",
+      "Tell your manager right away and offer to fix it.",
+      "Wait for someone else to catch it.",
+      "Quietly redo it and pretend it was always right."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "A client is frustrated on a call and raising their voice. What do you do?", options: [
+      "Hang up on them.",
+      "Stay calm, listen, and focus on actually solving their problem.",
+      "Match their tone and argue back.",
+      "Transfer them to someone else without explanation."
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "What does it mean to \'diversify\' your investments?", options: [
+      "Put all your money in one stock you really believe in.",
+      "Spread your money across different assets so one bad investment doesn't wipe you out.",
+      "Only invest in companies whose name you like.",
+      "Keep all your money in cash under your mattress."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Why do people keep an emergency fund?", options: [
+      "Because banks require it by law.",
+      "So an unexpected expense doesn't force them into high-interest debt.",
+      "To impress their accountant.",
+      "It earns a higher return than any investment."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What is compound interest?", options: [
+      "A one-time fee your bank charges you.",
+      "Interest calculated on both the original amount and the interest it's already earned.",
+      "Interest that only applies to loans, never savings.",
+      "A tax on interest income."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What's a credit score mainly used for?", options: [
+      "It determines your salary.",
+      "It signals to lenders how likely you are to repay borrowed money.",
+      "It's just your bank account balance.",
+      "It sets how much cash you can carry."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What does APR stand for on a loan or credit card?", options: [
+      "Automatic Payment Requirement.",
+      "Annual Percentage Rate — the yearly cost of borrowing, including interest.",
+      "Average Purchase Rate.",
+      "Approved Payment Record."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What's the main difference between a stock and a bond?", options: [
+      "They're two names for the same thing.",
+      "A stock is ownership in a company; a bond is a loan you make to a company or government.",
+      "Bonds are always riskier than stocks.",
+      "Stocks always pay a fixed interest rate."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Why might someone use a monthly budget?", options: [
+      "It's only useful for people already in debt.",
+      "To track income and expenses so spending doesn't outpace earning.",
+      "To avoid ever spending money on anything.",
+      "Budgets are just for businesses, not individuals."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What does it mean when a stock market index goes up?", options: [
+      "Every single stock in the world went up.",
+      "The overall value of the group of stocks it tracks increased, on average.",
+      "Interest rates went up.",
+      "The government printed more money."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What's a 401(k)?", options: [
+      "A type of checking account.",
+      "A retirement savings account, often offered through an employer, with tax advantages.",
+      "A government tax form.",
+      "A credit card rewards program."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Why do lenders care about your debt-to-income ratio?", options: [
+      "It tells them your favorite bank.",
+      "It shows how much of your income is already committed to debt payments, signaling repayment risk.",
+      "It's used to calculate your card's PIN.",
+      "It has no real use, it's just paperwork."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Inflation is running at 5% and your savings account pays 1% interest. What's happening to your money's purchasing power?", options: [
+      "It's growing by 6%.",
+      "It's shrinking — you're losing purchasing power in real terms even as the balance grows.",
+      "Nothing changes, interest and inflation cancel out exactly.",
+      "Purchasing power only depends on your salary."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "What's the general idea behind the 'debt avalanche' payoff method?", options: [
+      "Pay off your smallest debt first no matter the interest rate.",
+      "Pay minimums on everything, then throw extra money at the debt with the highest interest rate first.",
+      "Only pay debts on your birthday.",
+      "Ignore small debts and only pay large ones."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "Why is a Roth IRA often attractive compared to a regular taxable savings account?", options: [
+      "It has no rules or restrictions at all.",
+      "You contribute after-tax money, but qualified withdrawals in retirement are tax-free.",
+      "It guarantees a fixed 10% annual return.",
+      "It's the same as a checking account, just renamed."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "Why do financial advisors often recommend low-cost index funds over picking individual stocks?", options: [
+      "Index funds are guaranteed to never lose money.",
+      "Broad diversification and low fees tend to beat most people's attempts at picking individual winners over time.",
+      "Picking individual stocks is illegal for beginners.",
+      "Index funds pay you a fixed salary."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "What does it mean for a loan to be 'amortizing'?", options: [
+      "The interest rate doubles every year.",
+      "Each payment covers some interest and some principal, so the balance gradually shrinks to zero over the term.",
+      "You only pay interest until the very last payment, then the whole balance at once.",
+      "The lender forgives the loan automatically after 5 years."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "Two people earn the same salary. One starts saving 20% at age 25, the other at age 35. Why does the early saver likely end up with much more by retirement?", options: [
+      "The government gives bonus money to early savers.",
+      "Extra years of compounding growth make an outsized difference, even at the same savings rate.",
+      "There's no real difference, timing doesn't matter.",
+      "The later saver's money automatically grows faster to compensate."
+    ], correct: 1, category: "finance", tier: "hard" },
+];
+
+/* ---------------- Networking events ---------------- */
+
+DATA.NETWORKING_EVENTS = [
+  { id: "coffee", name: "Coffee Chat with an Alum", cost: 0, energy: 6, networkingGain: [1, 3], commGain: [0, 1], blurb: "Low-key, low-cost. Everyone starts here." },
+  { id: "mixer", name: "Industry Happy Hour", cost: 40, energy: 10, networkingGain: [2, 5], commGain: [1, 2], blurb: "Business cards, small talk, and overpriced drinks." },
+  { id: "conference", name: "Finance Conference", cost: 250, energy: 16, networkingGain: [4, 8], commGain: [1, 3], blurb: "A full day of panels and hallway networking." },
+  { id: "gala", name: "Charity Gala", cost: 600, energy: 14, networkingGain: [6, 10], commGain: [2, 4], blurb: "Black tie. This is where the Managing Directors actually show up." },
+  { id: "golf", name: "Golf Outing with Senior Bankers", cost: 350, energy: 20, networkingGain: [7, 12], commGain: [1, 2], blurb: "Four hours to make a lasting impression on a Partner." }
+];
+
+/* ---------------- Skill-training actions ---------------- */
+
+DATA.TRAINING_ACTIONS = [
+  { id: "network_train", skill: "networking", name: "Work the Room", cost: 0, energy: 8, gain: [1, 3] },
+  { id: "comm_train", skill: "communication", name: "Toastmasters Session", cost: 40, energy: 6, gain: [1, 3] },
+  { id: "sales_train", skill: "sales", name: "Shadow a Senior Banker's Pitch", cost: 0, energy: 10, gain: [1, 3] },
+  { id: "discipline_train", skill: "discipline", name: "Morning Routine & Journaling", cost: 0, energy: 5, gain: [1, 3] }
+];
+
+/* ---------------- Dating pool ---------------- */
+
+DATA.DATING_NAMES = [
+  "Jordan", "Alexis", "Morgan", "Taylor", "Casey", "Riley", "Sam", "Avery",
+  "Devon", "Reese", "Peyton", "Quinn", "Rowan", "Blair", "Skyler", "Emerson"
+];
+DATA.DATING_JOBS = [
+  "Corporate Lawyer", "Nurse Practitioner", "UX Designer", "High School Teacher",
+  "Marketing Manager", "Consultant", "Med Student", "Startup Founder",
+  "Architect", "Graphic Designer", "PR Associate", "Data Scientist"
+];
+DATA.DATING_BIOS = [
+  "Loves hiking and terrible reality TV in equal measure.",
+  "Will absolutely judge you for checking your phone at dinner.",
+  "Runs marathons for fun. Actual fun, apparently.",
+  "Has strong opinions about pizza toppings.",
+  "Reads two books a week and will quiz you on yours.",
+  "Thinks your work stories are either fascinating or a red flag, undecided.",
+  "Plays in an amateur soccer league on weekends.",
+  "Makes a mean cocktail and an even meaner comeback."
+];
+
+/* ---------------- Random monthly life events ---------------- */
+
+DATA.LIFE_EVENTS = [
+  { text: "Your phone screen cracks. An annoying, unavoidable cost.", cash: -180, stress: 3 },
+  { text: "A friend's wedding this weekend — gift, travel, the works.", cash: -350, stress: 4, happiness: 5 },
+  { text: "You caught a nasty cold going around the office.", stress: 6, energy: -15 },
+  { text: "Your rewards card posts a surprise cashback bonus.", cash: 120, stress: -2 },
+  { text: "The subway/commute was hell all week.", stress: 4 },
+  { text: "You found $20 in an old jacket pocket. Small win.", cash: 20, stress: -1 },
+  { text: "A parking ticket / traffic camera fine shows up.", cash: -150, stress: 2 },
+  { text: "Your family calls, worried you're working too hard.", stress: -3, happiness: 3 },
+  { text: "Unexpected medical co-pay bill arrives.", cash: -220, stress: 3 },
+  { text: "You treated yourself to a nice dinner out.", cash: -90, stress: -4, happiness: 4 }
+];
+
+DATA.STARTING_DEBT = 450000;
+DATA.LOAN_APR = 0.068;
+DATA.LOAN_TERM_MONTHS = 240; // 20-year amortization schedule
+DATA.SAVINGS_APY = 0.045;
+DATA.STARTING_CASH = 900;
+
+
+/* ---- js/state.js ---- */
+/* ==========================================================================
+   STATE.JS — game state shape, persistence, and pure helper calculations.
+   ========================================================================== */
+
+const SAVE_KEY = "ib_sim_save_v1";
+
+const STATE = {};
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+function pickRandom(arr) { return arr[randInt(0, arr.length - 1)]; }
+function fmtMoney(n) {
+  const neg = n < 0;
+  const s = Math.round(Math.abs(n)).toLocaleString("en-US");
+  return (neg ? "-$" : "$") + s;
+}
+
+/* ---------------- Loan amortization ---------------- */
+
+function calcMonthlyLoanPayment(principal, apr, termMonths) {
+  const r = apr / 12;
+  const factor = Math.pow(1 + r, termMonths);
+  return principal * r * factor / (factor - 1);
+}
+
+/* ---------------- New game ---------------- */
+
+function generateDatingPool() {
+  const pool = [];
+  const usedNames = new Set();
+  const count = 7;
+  for (let i = 0; i < count; i++) {
+    let name = pickRandom(DATA.DATING_NAMES);
+    while (usedNames.has(name)) name = pickRandom(DATA.DATING_NAMES);
+    usedNames.add(name);
+    pool.push({
+      id: "d" + i,
+      name,
+      job: pickRandom(DATA.DATING_JOBS),
+      bio: pickRandom(DATA.DATING_BIOS),
+      compatibility: randInt(40, 95),
+      relationship: 0,
+      status: "unmet" // unmet -> talking -> dating -> partner -> married
+    });
+  }
+  return pool;
+}
+
+function newGame(name) {
+  const minMonthly = calcMonthlyLoanPayment(DATA.STARTING_DEBT, DATA.LOAN_APR, DATA.LOAN_TERM_MONTHS);
+
+  Object.assign(STATE, {
+    name: name || "Alex Ward",
+    uiMode: "desktop",
+    ageYears: 22,
+    ageMonths: 0,
+    totalMonths: 0,
+    cash: DATA.STARTING_CASH,
+    savings: 0,
+    investment: 0,
+    debt: DATA.STARTING_DEBT,
+    loanAPR: DATA.LOAN_APR,
+    loanMinPayment: minMonthly,
+    loanPaymentDue: false,
+    loanMissedPayments: 0,
+
+    energy: 150,
+    maxEnergy: 150,
+    stress: 20,
+    happiness: 55,
+    reputation: 0,
+
+    skills: { networking: 5, communication: 5, sales: 5, discipline: 5 },
+
+    connections: {}, // firmId -> number
+
+    apartmentId: null,
+    evictionWarnings: 0,
+
+    car: { id: "none", balance: 0, missedPayments: 0 },
+
+    employment: null, // {firmId, track, titleIndex, monthsInTitle, monthsAtFirm, perfAccum:[], strikes}
+    ibExperienceMonths: 0,
+    careerMonthsWorked: 0,
+
+    education: { inMBA: false, mbaMonthsLeft: 0, hasMBA: false, mbaOfferMade: false },
+
+    dating: { pool: generateDatingPool(), partnerId: null, married: false },
+
+    log: [],
+    gameOver: false,
+    gameOverReason: "",
+    legendShown: false,
+    mbaEligibleShown: false
+  });
+
+  logEvent("You graduated with a finance degree, $450,000 in student debt, and a dream: become the best investment banker who ever lived.");
+  save();
+}
+
+function logEvent(text) {
+  STATE.log.unshift({ month: STATE.totalMonths, text });
+  if (STATE.log.length > 200) STATE.log.length = 200;
+}
+
+/* ---------------- Persistence ---------------- */
+
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(STATE)); } catch (e) { /* storage unavailable */ }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    Object.assign(STATE, parsed);
+    return true;
+  } catch (e) { return false; }
+}
+
+function hasSave() {
+  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+}
+
+function wipeSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+}
+
+/* ---------------- Derived helpers ---------------- */
+
+function currentTitleTrackName() {
+  if (!STATE.employment) return null;
+  return STATE.employment.track === "IB" ? DATA.TITLES_IB[STATE.employment.titleIndex] : DATA.TITLES_PE[STATE.employment.titleIndex];
+}
+
+function currentFirm() {
+  if (!STATE.employment) return null;
+  return DATA.FIRMS.find(f => f.id === STATE.employment.firmId);
+}
+
+function currentBaseSalary() {
+  if (!STATE.employment) return 0;
+  const firm = currentFirm();
+  const base = STATE.employment.track === "IB" ? DATA.BASE_IB[STATE.employment.titleIndex] : DATA.BASE_PE[STATE.employment.titleIndex];
+  return Math.round(base * firm.mult);
+}
+
+function titleSeniorityLabel() {
+  // Used for gating apartments/cars ("VP" / "Associate" tier and above)
+  if (!STATE.employment) return "None";
+  const idx = STATE.employment.titleIndex;
+  if (STATE.employment.track === "IB") {
+    if (idx >= 6) return "VP";
+    if (idx >= 3) return "Associate";
+    return "Analyst";
+  } else {
+    if (idx >= 2) return "VP";
+    return "Associate";
+  }
+}
+
+function meetsSeniority(reqTrack) {
+  const order = ["Analyst", "Associate", "VP"];
+  const cur = titleSeniorityLabel();
+  if (cur === "None") return false;
+  return order.indexOf(cur) >= order.indexOf(reqTrack);
+}
+
+function netWorth() {
+  const carValue = STATE.car.id !== "none" ? (DATA.CARS.find(c => c.id === STATE.car.id).cashPrice * 0.55) : 0;
+  return Math.round(STATE.cash + STATE.savings + STATE.investment + carValue - STATE.debt - STATE.car.balance);
+}
+
+function ageString() {
+  return STATE.ageYears + "y " + STATE.ageMonths + "m";
+}
+
+
+/* ---- js/engine.js ---- */
+/* ==========================================================================
+   ENGINE.JS — all game actions and the monthly simulation tick.
+   ========================================================================== */
+
+const ENGINE = {};
+
+/* ---------------- Generic resource helpers ---------------- */
+
+function canAfford(cost) { return STATE.cash >= cost; }
+function spend(cost) { STATE.cash -= cost; }
+function hasEnergy(cost) { return STATE.energy >= cost; }
+function spendEnergy(cost) { STATE.energy = clamp(STATE.energy - cost, 0, STATE.maxEnergy); }
+
+function addStress(v) { STATE.stress = clamp(STATE.stress + v, 0, 100); }
+function addHappiness(v) { STATE.happiness = clamp(STATE.happiness + v, 0, 100); }
+function addReputation(v) { STATE.reputation = clamp(STATE.reputation + v, -100, 200); }
+function addSkill(skill, v) { STATE.skills[skill] = clamp(STATE.skills[skill] + v, 0, 100); }
+
+/* ---------------- Networking ---------------- */
+
+ENGINE.doNetworkingEvent = function (eventId) {
+  const ev = DATA.NETWORKING_EVENTS.find(e => e.id === eventId);
+  if (!ev) return { ok: false, msg: "Unknown event." };
+  if (!canAfford(ev.cost)) return { ok: false, msg: "You can't afford this event." };
+  if (!hasEnergy(ev.energy)) return { ok: false, msg: "You're too exhausted for this." };
+  spend(ev.cost);
+  spendEnergy(ev.energy);
+  const netGain = randInt(ev.networkingGain[0], ev.networkingGain[1]);
+  const commGain = randInt(ev.commGain[0], ev.commGain[1]);
+  addSkill("networking", netGain);
+  addSkill("communication", commGain);
+  addHappiness(1);
+  logEvent(`Attended "${ev.name}" — Networking +${netGain}, Communication +${commGain}.`);
+  save();
+  return { ok: true };
+};
+
+/* ---------------- Training ---------------- */
+
+ENGINE.doTraining = function (actionId) {
+  const a = DATA.TRAINING_ACTIONS.find(x => x.id === actionId);
+  if (!a) return { ok: false, msg: "Unknown action." };
+  if (!canAfford(a.cost)) return { ok: false, msg: "You can't afford this." };
+  if (!hasEnergy(a.energy)) return { ok: false, msg: "You're too exhausted for this." };
+  spend(a.cost);
+  spendEnergy(a.energy);
+  const gain = randInt(a.gain[0], a.gain[1]);
+  addSkill(a.skill, gain);
+  logEvent(`${a.name} — ${a.skill[0].toUpperCase() + a.skill.slice(1)} +${gain}.`);
+  save();
+  return { ok: true };
+};
+
+/* ---------------- Career: applying & hiring ---------------- */
+
+ENGINE.firmEligibility = function (firmId) {
+  const firm = DATA.FIRMS.find(f => f.id === firmId);
+  const reasons = [];
+  if (firm.type === "PE" && STATE.ibExperienceMonths < firm.minIBMonths) {
+    reasons.push(`Requires ${Math.round(firm.minIBMonths / 12 * 10) / 10}+ years of IB experience.`);
+  }
+  if (STATE.skills.networking < firm.reqNetworking) reasons.push(`Needs Networking ${firm.reqNetworking}+ (you: ${STATE.skills.networking}).`);
+  if (STATE.skills.communication < firm.reqComm) reasons.push(`Needs Communication ${firm.reqComm}+ (you: ${STATE.skills.communication}).`);
+  return { eligible: reasons.length === 0, reasons };
+};
+
+ENGINE.hireAtFirm = function (firmId, track, offerScore) {
+  const firm = DATA.FIRMS.find(f => f.id === firmId);
+  let titleIndex = 0;
+  if (STATE.education.hasMBA && track === "IB") titleIndex = 3; // Associate I
+  if (STATE.education.hasMBA && track === "PE") titleIndex = 0; // PE Associate
+  if (track === "PE" && !STATE.education.hasMBA) titleIndex = 0;
+
+  STATE.employment = {
+    firmId, track, titleIndex,
+    monthsInTitle: 0,
+    monthsAtFirm: 0,
+    perfAccum: [],
+    yearPerfAccum: [],
+    strikes: 0
+  };
+  addReputation(5);
+  logEvent(`You accepted an offer from ${firm.name} as ${track === "IB" ? DATA.TITLES_IB[titleIndex] : DATA.TITLES_PE[titleIndex]}!`);
+  save();
+};
+
+ENGINE.resign = function () {
+  if (!STATE.employment) return;
+  const firm = currentFirm();
+  logEvent(`You resigned from ${firm.name}.`);
+  STATE.employment = null;
+  addStress(10);
+  save();
+};
+
+/* ---------------- MBA ---------------- */
+
+ENGINE.canStartMBA = function () {
+  return (STATE.careerMonthsWorked || 0) >= 36 && !STATE.education.inMBA && !STATE.education.hasMBA;
+};
+
+ENGINE.startMBA = function (recruitTarget) {
+  if (!ENGINE.canStartMBA()) return { ok: false, msg: "You're not eligible yet." };
+  if (STATE.employment) ENGINE.resign();
+  STATE.debt += 220000;
+  STATE.education.inMBA = true;
+  STATE.education.mbaMonthsLeft = 24;
+  STATE.education.recruitTarget = recruitTarget;
+  STATE.education.perfAccum = [];
+  addStress(8);
+  logEvent(`You enrolled in a top MBA program. Tuition and living costs added $220,000 to your debt. Two years of full-time study begin now.`);
+  save();
+  return { ok: true };
+};
+
+function graduateMBA() {
+  STATE.education.inMBA = false;
+  STATE.education.hasMBA = true;
+  const acc = STATE.education.perfAccum || [];
+  const avg = acc.length ? acc.reduce((a, b) => a + b, 0) / acc.length : 0.4;
+  logEvent(`You graduated with your MBA. Recruiting performance score: ${(avg * 100).toFixed(0)}/100.`);
+
+  const target = STATE.education.recruitTarget || "IB";
+  let candidates = DATA.FIRMS.filter(f => f.type === target && (target === "IB" || STATE.ibExperienceMonths >= f.minIBMonths));
+  if (candidates.length === 0) candidates = DATA.FIRMS.filter(f => f.type === "IB");
+  candidates = candidates.slice().sort((a, b) => a.prestige - b.prestige);
+
+  let chosen;
+  if (avg >= 0.75) chosen = candidates[candidates.length - 1];
+  else if (avg >= 0.5) chosen = candidates[Math.floor(candidates.length / 2)];
+  else chosen = candidates[0];
+
+  ENGINE.hireAtFirm(chosen.id, target, avg);
+  save();
+}
+
+/* ---------------- Housing ---------------- */
+
+ENGINE.moveApartment = function (aptId) {
+  const apt = DATA.APARTMENTS.find(a => a.id === aptId);
+  if (!apt) return { ok: false, msg: "Unknown apartment." };
+  if (apt.minTitleTrack && !meetsSeniority(apt.minTitleTrack)) {
+    return { ok: false, msg: `You need to be at least a ${apt.minTitleTrack} to qualify for this address.` };
+  }
+  if (!canAfford(apt.moveInCost)) return { ok: false, msg: "You can't afford the move-in cost (deposit + fees)." };
+  spend(apt.moveInCost);
+  STATE.apartmentId = aptId;
+  STATE.evictionWarnings = 0;
+  logEvent(`You moved into: ${apt.name}.`);
+  save();
+  return { ok: true };
+};
+
+/* ---------------- Cars ---------------- */
+
+ENGINE.buyCar = function (carId, financed) {
+  const car = DATA.CARS.find(c => c.id === carId);
+  if (!car) return { ok: false, msg: "Unknown car." };
+  if (car.minTitleTrack && !meetsSeniority(car.minTitleTrack)) {
+    return { ok: false, msg: `You need to be at least a ${car.minTitleTrack} for this car.` };
+  }
+  if (STATE.car.balance > 0) return { ok: false, msg: "Pay off or sell your current car first." };
+
+  if (carId === "none") {
+    STATE.car = { id: "none", balance: 0, missedPayments: 0 };
+    logEvent("You sold your car. Back to the subway.");
+    save();
+    return { ok: true };
+  }
+
+  if (financed) {
+    if (!canAfford(car.downPayment)) return { ok: false, msg: "You can't afford the down payment." };
+    spend(car.downPayment);
+    STATE.car = { id: carId, balance: car.cashPrice - car.downPayment, missedPayments: 0 };
+    logEvent(`You financed a ${car.name}. Down payment: ${fmtMoney(car.downPayment)}.`);
+  } else {
+    if (!canAfford(car.cashPrice)) return { ok: false, msg: "You can't afford this car in cash." };
+    spend(car.cashPrice);
+    STATE.car = { id: carId, balance: 0, missedPayments: 0 };
+    logEvent(`You bought a ${car.name} in cash.`);
+  }
+  addReputation(Math.round(car.reputation / 2));
+  save();
+  return { ok: true };
+};
+
+/* ---------------- Banking ---------------- */
+
+ENGINE.transferToSavings = function (amount) {
+  if (amount <= 0 || amount > STATE.cash) return { ok: false, msg: "Invalid amount." };
+  STATE.cash -= amount;
+  STATE.savings += amount;
+  save();
+  return { ok: true };
+};
+
+ENGINE.transferToChecking = function (amount) {
+  if (amount <= 0 || amount > STATE.savings) return { ok: false, msg: "Invalid amount." };
+  STATE.savings -= amount;
+  STATE.cash += amount;
+  save();
+  return { ok: true };
+};
+
+ENGINE.investFunds = function (amount) {
+  if (amount <= 0 || amount > STATE.cash) return { ok: false, msg: "Invalid amount." };
+  STATE.cash -= amount;
+  STATE.investment += amount;
+  save();
+  return { ok: true };
+};
+
+ENGINE.divestFunds = function (amount) {
+  if (amount <= 0 || amount > STATE.investment) return { ok: false, msg: "Invalid amount." };
+  STATE.investment -= amount;
+  STATE.cash += amount;
+  save();
+  return { ok: true };
+};
+
+ENGINE.payLoan = function (amount) {
+  if (amount <= 0 || amount > STATE.cash) return { ok: false, msg: "Invalid amount." };
+  const payment = Math.min(amount, STATE.debt);
+  STATE.cash -= payment;
+  STATE.debt = Math.max(0, STATE.debt - payment);
+  if (amount >= STATE.loanMinPayment - 0.01 || STATE.debt === 0) {
+    STATE.loanPaymentDue = false;
+    STATE.loanMissedPayments = 0;
+  }
+  addSkill("discipline", 1);
+  logEvent(`Paid ${fmtMoney(payment)} toward your student loans. Balance: ${fmtMoney(STATE.debt)}.`);
+  save();
+  return { ok: true };
+};
+
+/* ---------------- Dating ---------------- */
+
+ENGINE.messageCandidate = function (id) {
+  const c = STATE.dating.pool.find(p => p.id === id);
+  if (!c) return { ok: false };
+  if (!hasEnergy(5)) return { ok: false, msg: "Too exhausted to text back." };
+  spendEnergy(5);
+  if (c.status === "unmet") c.status = "talking";
+  const gain = randInt(1, 4) + Math.round(STATE.skills.communication / 25);
+  c.relationship = clamp(c.relationship + gain, 0, 100);
+  logEvent(`You messaged ${c.name}. Relationship +${gain}.`);
+  save();
+  return { ok: true };
+};
+
+ENGINE.goOnDate = function (id) {
+  const c = STATE.dating.pool.find(p => p.id === id);
+  if (!c) return { ok: false };
+  const cost = 70;
+  if (!canAfford(cost)) return { ok: false, msg: "You can't afford a date right now." };
+  if (!hasEnergy(14)) return { ok: false, msg: "Too exhausted for a date tonight." };
+  spend(cost);
+  spendEnergy(14);
+  c.status = "dating";
+  const commBonus = Math.round(STATE.skills.communication / 15);
+  const salesBonus = Math.round(STATE.skills.sales / 20);
+  const roll = randInt(-5, 12) + commBonus + salesBonus;
+  c.relationship = clamp(c.relationship + roll, 0, 100);
+  addHappiness(6);
+  addStress(-3);
+  logEvent(roll >= 5 ? `Great date with ${c.name}! Relationship +${roll}.` : `A decent date with ${c.name}. Relationship +${roll}.`);
+  save();
+  return { ok: true };
+};
+
+ENGINE.defineRelationship = function (id) {
+  const c = STATE.dating.pool.find(p => p.id === id);
+  if (!c) return { ok: false };
+  if (c.relationship < 40) return { ok: false, msg: "You're not close enough yet." };
+  if (STATE.dating.partnerId) return { ok: false, msg: "You're already seeing someone." };
+  c.status = "partner";
+  STATE.dating.partnerId = id;
+  addHappiness(10);
+  logEvent(`You and ${c.name} made it official.`);
+  save();
+  return { ok: true };
+};
+
+ENGINE.breakUp = function () {
+  const id = STATE.dating.partnerId;
+  if (!id) return;
+  const c = STATE.dating.pool.find(p => p.id === id);
+  if (c) { c.status = "unmet"; c.relationship = 0; }
+  STATE.dating.partnerId = null;
+  STATE.dating.married = false;
+  addHappiness(-15);
+  addStress(10);
+  logEvent(`You and ${c ? c.name : "your partner"} broke up.`);
+  save();
+};
+
+ENGINE.propose = function () {
+  const id = STATE.dating.partnerId;
+  const c = STATE.dating.pool.find(p => p.id === id);
+  if (!c || c.relationship < 90) return { ok: false, msg: "Your relationship isn't strong enough yet." };
+  const cost = 12000;
+  if (!canAfford(cost)) return { ok: false, msg: "You can't afford a ring and wedding right now (~$12,000)." };
+  spend(cost);
+  c.status = "married";
+  STATE.dating.married = true;
+  addHappiness(25);
+  addStress(-10);
+  logEvent(`You married ${c.name}! The wedding cost ${fmtMoney(cost)}, but it was worth it.`);
+  save();
+  return { ok: true };
+};
+
+/* ---------------- Interview resolution ---------------- */
+
+ENGINE.resolveInterview = function (firmId, track, scorePct) {
+  const firm = DATA.FIRMS.find(f => f.id === firmId);
+  const commBoost = STATE.skills.communication / 250; // up to +0.4
+  const finalScore = clamp(scorePct + commBoost + 0.12, 0, 1); // +0.12 base courtesy cushion
+  let outcome;
+  if (finalScore >= 0.7) outcome = "strong";
+  else if (finalScore >= 0.42) outcome = "pass";
+  else if (finalScore >= 0.22) outcome = "borderline";
+  else outcome = "reject";
+
+  if (outcome === "reject") {
+    logEvent(`${firm.name} passed on you this round. Keep networking and sharpen up.`);
+    addStress(5);
+    save();
+    return { hired: false, outcome };
+  }
+
+  // Even a good interview doesn't guarantee an offer -- more prestigious firms
+  // have far more applicants per seat, independent of how well you did.
+  const competitiveness = firm.competitiveness != null ? firm.competitiveness : 0.3;
+  const tierBaseChance = { strong: 0.92, pass: 0.72, borderline: 0.45 }[outcome];
+  const hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
+
+  if (Math.random() > hireChance) {
+    logEvent(`${firm.name} liked what they saw, but the seat went to another candidate — roles at a ${firm.tier} shop are brutally competitive.`);
+    addStress(4);
+    save();
+    return { hired: false, outcome };
+  }
+
+  ENGINE.hireAtFirm(firmId, track, finalScore);
+  return { hired: true, outcome };
+};
+
+/* ---------------- Monthly work performance -> pay math ---------------- */
+
+function performanceToBonusMult(range, score) {
+  return range[0] + (range[1] - range[0]) * score;
+}
+
+// Rough combined effective rate (federal + state + city + FICA) for a NYC-based banker.
+function effectiveTaxRate(annualIncome) {
+  if (annualIncome < 60000) return 0.20;
+  if (annualIncome < 120000) return 0.26;
+  if (annualIncome < 220000) return 0.31;
+  if (annualIncome < 450000) return 0.36;
+  if (annualIncome < 900000) return 0.40;
+  return 0.43;
+}
+
+function payMonthlyPaycheck() {
+  if (!STATE.employment) return;
+  const annual = currentBaseSalary();
+  const grossMonthly = annual / 12;
+  const netMonthly = grossMonthly * (1 - effectiveTaxRate(annual));
+  STATE.cash += netMonthly;
+}
+
+function checkPromotion() {
+  const e = STATE.employment;
+  const track = e.track;
+  const titles = track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
+  const monthsArr = track === "IB" ? DATA.MONTHS_PER_TITLE_IB : DATA.MONTHS_PER_TITLE_PE;
+  const monthsNeeded = monthsArr[e.titleIndex];
+  if (e.monthsInTitle < monthsNeeded) return;
+  if (e.titleIndex >= titles.length - 1) return; // already at top
+
+  const avg = e.perfAccum.length ? e.perfAccum.reduce((a, b) => a + b, 0) / e.perfAccum.length : 0.4;
+  if (avg >= 0.45) {
+    e.titleIndex++;
+    e.monthsInTitle = 0;
+    e.perfAccum = [];
+    addReputation(8);
+    logEvent(`Promoted to ${titles[e.titleIndex]}! Your hard work paid off.`);
+  } else {
+    // Not promoted on schedule; gentle reset window, slight morale hit
+    e.monthsInTitle = Math.round(monthsNeeded * 0.5);
+    addStress(6);
+    logEvent(`You were passed over for promotion this cycle. Performance needs to improve.`);
+  }
+}
+
+const OUTPERFORMANCE_THRESHOLD = 0.6; // performance score above 60/100
+const OUTPERFORMANCE_BONUS_RATE = 0.12; // extra % of base salary
+
+function payYearEndBonus() {
+  const e = STATE.employment;
+  const track = e.track;
+  const range = (track === "IB" ? DATA.BONUS_RANGE_IB : DATA.BONUS_RANGE_PE)[e.titleIndex];
+  const acc = e.yearPerfAccum && e.yearPerfAccum.length ? e.yearPerfAccum : e.perfAccum;
+  const avg = acc.length ? acc.reduce((a, b) => a + b, 0) / acc.length : 0.4;
+  const salesBoost = STATE.skills.sales / 500; // up to +0.2
+  const mult = performanceToBonusMult(range, clamp(avg + salesBoost, 0, 1));
+  const grossBonus = Math.round(currentBaseSalary() * mult);
+  const netBonus = Math.round(grossBonus * (1 - effectiveTaxRate(currentBaseSalary() + grossBonus)));
+  STATE.cash += netBonus;
+  logEvent(`Year-end bonus at ${currentFirm().name}: ${fmtMoney(netBonus)} after tax (gross ${fmtMoney(grossBonus)}, performance ${(avg * 100).toFixed(0)}/100).`);
+
+  if (avg > OUTPERFORMANCE_THRESHOLD) {
+    const grossKicker = Math.round(currentBaseSalary() * OUTPERFORMANCE_BONUS_RATE);
+    const netKicker = Math.round(grossKicker * (1 - effectiveTaxRate(currentBaseSalary() + grossBonus + grossKicker)));
+    STATE.cash += netKicker;
+    addReputation(3);
+    logEvent(`Outperformance bonus: your ${(avg * 100).toFixed(0)}/100 average this year topped the firm's 60/100 bar, earning an extra ${fmtMoney(netKicker)}.`);
+  }
+}
+
+/* ---------------- Billing ---------------- */
+
+function billRent() {
+  if (!STATE.apartmentId) return;
+  const apt = DATA.APARTMENTS.find(a => a.id === STATE.apartmentId);
+  STATE.cash -= apt.monthlyRent;
+  if (STATE.cash < -1500) {
+    STATE.evictionWarnings++;
+    addStress(4);
+    if (STATE.evictionWarnings >= 4) {
+      logEvent(`You fell too far behind on rent and were evicted from ${apt.name}. You're back in your parents' basement.`);
+      STATE.apartmentId = "basement";
+      STATE.evictionWarnings = 0;
+      addReputation(-6);
+    }
+  } else {
+    STATE.evictionWarnings = Math.max(0, STATE.evictionWarnings - 1);
+  }
+}
+
+function billCarLoan() {
+  if (STATE.car.balance <= 0) return;
+  const car = DATA.CARS.find(c => c.id === STATE.car.id);
+  if (STATE.cash >= car.monthlyPayment) {
+    STATE.cash -= car.monthlyPayment;
+    STATE.car.balance = Math.max(0, STATE.car.balance - car.monthlyPayment);
+    STATE.car.missedPayments = 0;
+  } else {
+    STATE.car.missedPayments++;
+    addStress(6);
+    addReputation(-3);
+    logEvent(`You missed your car payment on the ${car.name}.`);
+    if (STATE.car.missedPayments >= 3) {
+      logEvent(`Your ${car.name} was repossessed.`);
+      STATE.car = { id: "none", balance: 0, missedPayments: 0 };
+      addReputation(-10);
+    }
+  }
+}
+
+function billStudentLoan() {
+  if (STATE.debt <= 0) return;
+
+  if (STATE.loanPaymentDue) {
+    // Payment was due and never made -> penalty
+    const lateFee = 175;
+    STATE.debt += lateFee;
+    STATE.loanMissedPayments = (STATE.loanMissedPayments || 0) + 1;
+    addSkill("discipline", -4);
+    addReputation(-4);
+    addStress(10);
+    logEvent(`You missed your student loan payment! A ${fmtMoney(lateFee)} late fee was added and your credit took a hit.`);
+    if (STATE.loanMissedPayments >= 4) {
+      STATE.gameOver = true;
+      STATE.gameOverReason = "Your student loans went into default. Wages garnished, credit destroyed — your banking career is over.";
+    }
+  }
+
+  const interest = STATE.debt * (STATE.loanAPR / 12);
+  STATE.debt += interest;
+  STATE.loanPaymentDue = true;
+}
+
+function billSavingsAndInvestments() {
+  STATE.savings *= (1 + DATA.SAVINGS_APY / 12);
+  if (STATE.investment > 0) {
+    STATE.investment *= (1 + rand(-0.06, 0.07));
+  }
+}
+
+function maybeRandomEvent() {
+  if (Math.random() > 0.35) return;
+  const ev = pickRandom(DATA.LIFE_EVENTS);
+  if (ev.cash) STATE.cash += ev.cash;
+  if (ev.stress) addStress(ev.stress);
+  if (ev.energy) STATE.energy = clamp(STATE.energy + ev.energy, 0, STATE.maxEnergy);
+  if (ev.happiness) addHappiness(ev.happiness);
+  logEvent(ev.text);
+}
+
+function datingDecay() {
+  STATE.dating.pool.forEach(c => {
+    if (c.status === "dating" || c.status === "partner" || c.status === "married") {
+      const decay = c.status === "married" ? 1 : 2;
+      c.relationship = clamp(c.relationship - decay, 0, 100);
+      if (c.relationship <= 0 && c.status !== "married" && STATE.dating.partnerId === c.id) {
+        ENGINE.breakUp();
+      }
+    }
+  });
+}
+
+/* ---------------- Month advance orchestration ---------------- */
+
+ENGINE.needsMinigameThisMonth = function () {
+  return !!STATE.employment || STATE.education.inMBA;
+};
+
+ENGINE.finishMonth = function (perfScore) {
+  if (STATE.gameOver) return;
+
+  // Age up
+  STATE.ageMonths++;
+  STATE.totalMonths++;
+  if (STATE.ageMonths >= 12) {
+    STATE.ageMonths = 0;
+    STATE.ageYears++;
+    addHappiness(5);
+    logEvent(`Happy birthday — you're now ${STATE.ageYears}.`);
+  }
+
+  // Work / school performance
+  if (STATE.employment && perfScore !== null && perfScore !== undefined) {
+    payMonthlyPaycheck();
+    STATE.employment.perfAccum.push(perfScore);
+    STATE.employment.yearPerfAccum = STATE.employment.yearPerfAccum || [];
+    STATE.employment.yearPerfAccum.push(perfScore);
+    STATE.employment.monthsInTitle++;
+    STATE.employment.monthsAtFirm++;
+    STATE.careerMonthsWorked = (STATE.careerMonthsWorked || 0) + 1;
+    if (STATE.employment.track === "IB") STATE.ibExperienceMonths++;
+
+    if (perfScore < 0.2) {
+      STATE.employment.strikes++;
+      addStress(8);
+      logEvent(`Rough month at the desk. Your MD noticed. (Strike ${STATE.employment.strikes}/3)`);
+      if (STATE.employment.strikes >= 3) {
+        const firmName = currentFirm().name;
+        logEvent(`You were let go from ${firmName} after repeated performance issues.`);
+        STATE.employment = null;
+        addReputation(-15);
+        addStress(15);
+      }
+    } else if (perfScore >= 0.7) {
+      STATE.employment.strikes = Math.max(0, STATE.employment.strikes - 1);
+      addSkill("discipline", 1);
+    }
+
+    if (STATE.employment) {
+      if (STATE.employment.monthsAtFirm > 0 && STATE.employment.monthsAtFirm % 12 === 0) {
+        payYearEndBonus();
+        STATE.employment.yearPerfAccum = [];
+      }
+      checkPromotion();
+    }
+    spendEnergy(0); // energy already spent by minigame itself
+  } else if (STATE.education.inMBA && perfScore !== null && perfScore !== undefined) {
+    STATE.education.perfAccum = STATE.education.perfAccum || [];
+    STATE.education.perfAccum.push(perfScore);
+    STATE.education.mbaMonthsLeft--;
+    if (STATE.education.mbaMonthsLeft <= 0) {
+      graduateMBA();
+    }
+  }
+
+  // Billing
+  billRent();
+  billCarLoan();
+  billStudentLoan();
+  billSavingsAndInvestments();
+  datingDecay();
+  maybeRandomEvent();
+
+  // Energy & stress natural drift (monthly reset)
+  STATE.energy = clamp(STATE.energy + 100, 0, STATE.maxEnergy);
+  if (STATE.stress > 60) addHappiness(-2);
+  addStress(STATE.happiness > 55 ? -3 : 1);
+  if (STATE.debt > 0) addStress(1);
+
+  // Debt payoff win flavor
+  if (STATE.debt <= 0 && !STATE.debtFreeLogged) {
+    STATE.debtFreeLogged = true;
+    logEvent(`You are officially DEBT FREE. $450,000 paid off. Incredible.`);
+    addHappiness(20);
+    addStress(-15);
+  }
+
+  // Legend ending check (does not stop the game, just celebrates once)
+  if (!STATE.legendShown && STATE.employment) {
+    const topIB = STATE.employment.track === "IB" && STATE.employment.titleIndex === DATA.TITLES_IB.length - 1;
+    const topPE = STATE.employment.track === "PE" && STATE.employment.titleIndex === DATA.TITLES_PE.length - 1;
+    if (topIB || topPE) {
+      STATE.legendShown = true;
+      STATE.pendingLegend = true;
+    }
+  }
+
+  if (STATE.cash < -25000) {
+    STATE.gameOver = true;
+    STATE.gameOverReason = "You spiraled into unmanageable debt and creditors came calling. Game over.";
+  }
+
+  save();
+};
+
+
+/* ---- js/minigames.js ---- */
+/* ==========================================================================
+   MINIGAMES.JS — the "actually do the work" mandatory monthly minigames.
+   Two variants (Model Crunch, All-Nighter Reflex) alternate/roll randomly.
+   Both resolve to a 0..1 performance score fed back into ENGINE.finishMonth.
+   ========================================================================== */
+
+const MINIGAMES = {};
+
+function modalRoot() { return document.getElementById("modal-root"); }
+
+function clearModal() { modalRoot().innerHTML = ""; modalRoot().classList.remove("open"); }
+
+function openModalHTML(html) {
+  const root = modalRoot();
+  root.innerHTML = html;
+  root.classList.add("open");
+}
+
+/* ---------------- Question generators for "Model Crunch" ---------------- */
+
+function genQ_multiple() {
+  const ebitda = randInt(15, 85);
+  const mult = randInt(45, 135) / 10;
+  const ev = Math.round(ebitda * mult);
+  const opts = shuffleOptions(ev, [
+    Math.round(ev * 0.85), Math.round(ev * 1.15), Math.round(ev * 1.3)
+  ]);
+  return {
+    text: `EBITDA is $${ebitda}M. The comp set trades at ${mult.toFixed(1)}x. Implied Enterprise Value?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => "$" + v + "M"
+  };
+}
+
+function genQ_growth() {
+  const a = randInt(80, 400);
+  const growthPct = randInt(5, 40);
+  const b = Math.round(a * (1 + growthPct / 100));
+  const opts = shuffleOptions(growthPct, [growthPct - 6, growthPct + 5, growthPct + 12].map(v => Math.max(1, v)));
+  return {
+    text: `Revenue grew from $${a}M to $${b}M. What's the approximate % growth?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + "%"
+  };
+}
+
+function genQ_wacc() {
+  const coe = randInt(9, 16);
+  const cod = randInt(4, 8);
+  const weq = randInt(40, 70);
+  const wacc = Math.round((coe * weq + cod * (100 - weq)) / 100);
+  const opts = shuffleOptions(wacc, [wacc - 4, wacc + 4, wacc + 8]);
+  return {
+    text: `Cost of equity ${coe}%, after-tax cost of debt ${cod}%, equity is ${weq}% of capital. Approx. WACC?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + "%"
+  };
+}
+
+function genQ_eps() {
+  const before = randInt(150, 400) / 100;
+  const changePct = randInt(-25, 25);
+  const after = Math.round(before * (1 + changePct / 100) * 100) / 100;
+  const opts = shuffleOptions(changePct, [changePct - 8, changePct + 7, changePct + 15]);
+  return {
+    text: `Pro-forma EPS moves from $${before.toFixed(2)} to $${after.toFixed(2)}. Is this deal accretive or dilutive, and by roughly what %?`,
+    options: opts.options.map(v => (v >= 0 ? `Accretive, +${v}%` : `Dilutive, ${v}%`)),
+    correctIndex: opts.correctIndex,
+    fmt: null
+  };
+}
+
+// Plain office-arithmetic questions -- no finance jargon required.
+function genQ_timeSum() {
+  const a = randInt(15, 60), b = randInt(15, 60), c = randInt(15, 60);
+  const total = a + b + c;
+  const opts = shuffleOptions(total, [total - 15, total + 10, total + 25]);
+  return {
+    text: `You have three calls today lasting ${a}, ${b}, and ${c} minutes. How much total time is that?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + " min"
+  };
+}
+
+function genQ_budgetSplit() {
+  const people = randInt(3, 6);
+  const perPerson = randInt(15, 60);
+  const total = perPerson * people;
+  const opts = shuffleOptions(perPerson, [perPerson - 5, perPerson + 5, perPerson + 10].map(v => Math.max(1, v)));
+  return {
+    text: `The team orders $${total} of lunch, split evenly ${people} ways. How much does each person owe?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => "$" + v
+  };
+}
+
+function genQ_emailPace() {
+  const emails = randInt(12, 40);
+  const perTenMin = randInt(2, 5);
+  const minutes = Math.round((emails / perTenMin) * 10);
+  const opts = shuffleOptions(minutes, [Math.round(minutes * 0.6), Math.round(minutes * 1.4), Math.round(minutes * 1.7)]);
+  return {
+    text: `You need to send ${emails} follow-up emails and can do about ${perTenMin} per 10 minutes. Roughly how long will that take?`,
+    options: opts.options, correctIndex: opts.correctIndex, fmt: v => v + " min"
+  };
+}
+
+function shuffleOptions(correctVal, distractors) {
+  const vals = [correctVal, ...distractors];
+  // Fisher-Yates
+  for (let i = vals.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [vals[i], vals[j]] = [vals[j], vals[i]];
+  }
+  return { options: vals, correctIndex: vals.indexOf(correctVal) };
+}
+
+const CRUNCH_EASY_GENERATORS = [genQ_timeSum, genQ_budgetSplit, genQ_emailPace, genQ_growth];
+const CRUNCH_HARD_GENERATORS = [genQ_multiple, genQ_wacc, genQ_eps];
+const MODEL_CRUNCH_TIMER_SECONDS = 20;
+
+function crunchDifficultyWeights() {
+  if (!STATE.employment) return { easy: 0.8, hard: 0.2 }; // MBA study / unemployed practice
+  const s = titleSeniorityLabel();
+  if (s === "Analyst") return { easy: 0.9, hard: 0.1 };
+  if (s === "Associate") return { easy: 0.65, hard: 0.35 };
+  return { easy: 0.45, hard: 0.55 }; // VP+
+}
+
+function pickCrunchGenerator() {
+  const w = crunchDifficultyWeights();
+  const pool = Math.random() < w.easy ? CRUNCH_EASY_GENERATORS : CRUNCH_HARD_GENERATORS;
+  return pickRandom(pool);
+}
+
+/* ---------------- Model Crunch minigame ---------------- */
+
+function launchModelCrunch(title, onDone) {
+  const TOTAL = 5;
+  let idx = 0, correct = 0, timer = null;
+  const startEnergy = STATE.energy;
+
+  function nextQuestion() {
+    if (idx >= TOTAL) return finish();
+    const gen = pickCrunchGenerator();
+    const q = gen();
+    let timeLeft = MODEL_CRUNCH_TIMER_SECONDS;
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${title} <span class="minigame-progress">Question ${idx + 1}/${TOTAL}</span></div>
+        <div class="minigame-timerbar"><div class="minigame-timerfill" id="mg-timer" style="width:100%"></div></div>
+        <div class="minigame-question">${q.text}</div>
+        <div class="minigame-options" id="mg-options"></div>
+      </div>
+    `);
+    const optsEl = document.getElementById("mg-options");
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "btn option-btn";
+      btn.textContent = q.fmt ? q.fmt(opt) : opt;
+      btn.onclick = () => answer(i === q.correctIndex);
+      optsEl.appendChild(btn);
+    });
+
+    function answer(isCorrect) {
+      clearInterval(timer);
+      if (isCorrect) correct++;
+      idx++;
+      setTimeout(nextQuestion, 250);
+    }
+
+    timer = setInterval(() => {
+      timeLeft -= 0.2;
+      const fill = document.getElementById("mg-timer");
+      if (fill) fill.style.width = clamp(timeLeft / MODEL_CRUNCH_TIMER_SECONDS * 100, 0, 100) + "%";
+      if (timeLeft <= 0) { answer(false); }
+    }, 200);
+  }
+
+  function finish() {
+    clearModal();
+    const raw = correct / TOTAL;
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
+    onDone(score, raw, correct, TOTAL);
+  }
+
+  nextQuestion();
+}
+
+/* ---------------- All-Nighter Reflex minigame ---------------- */
+
+function launchReflex(title, onDone) {
+  const ROUNDS = 5;
+  let round = 0;
+  let scores = [];
+  const startEnergy = STATE.energy;
+
+  function nextRound() {
+    if (round >= ROUNDS) return finish();
+    round++;
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${title} <span class="minigame-progress">Round ${round}/${ROUNDS}</span></div>
+        <div class="minigame-sub">Wait for the box to turn green, then click it as fast as you can. Click too early and it's a whiff.</div>
+        <div class="reflex-box waiting" id="reflex-box">Wait...</div>
+      </div>
+    `);
+    const box = document.getElementById("reflex-box");
+    let goTime = null;
+    let resolved = false;
+    const delay = rand(700, 2400);
+    const earlyTimer = setTimeout(() => {
+      box.classList.remove("waiting");
+      box.classList.add("go");
+      box.textContent = "CLICK!";
+      goTime = performance.now();
+    }, delay);
+
+    box.onclick = () => {
+      if (resolved) return;
+      if (goTime === null) {
+        resolved = true;
+        clearTimeout(earlyTimer);
+        box.classList.add("early");
+        box.textContent = "Too early!";
+        scores.push(0.2);
+        setTimeout(nextRound, 500);
+        return;
+      }
+      resolved = true;
+      const rt = performance.now() - goTime;
+      let s;
+      if (rt <= 350) s = 1.0;
+      else if (rt <= 520) s = 0.85;
+      else if (rt <= 750) s = 0.68;
+      else if (rt <= 1100) s = 0.5;
+      else s = 0.35;
+      box.textContent = Math.round(rt) + " ms";
+      scores.push(s);
+      setTimeout(nextRound, 450);
+    };
+  }
+
+  function finish() {
+    clearModal();
+    const raw = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
+    onDone(score, raw);
+  }
+
+  nextRound();
+}
+
+/* ---------------- Inbox Triage minigame ---------------- */
+
+const TRIAGE_SCENARIOS = [
+  { text: "Your MD needs the updated numbers within the hour.", correct: "reply" },
+  { text: "A vendor sends a mass email advertising new office chairs.", correct: "ignore" },
+  { text: "A first-year analyst has a basic question that's already answered on the team wiki.", correct: "delegate" },
+  { text: "A client asks for a quick confirmation on tomorrow's meeting time.", correct: "reply" },
+  { text: "You're cc'd on a thread that another team already resolved yesterday.", correct: "ignore" },
+  { text: "Your VP wants your read on a deal point before end of day.", correct: "reply" },
+  { text: "IT sends a routine password-expiration notice.", correct: "ignore" },
+  { text: "A summer intern needs hands-on help with something that's really the associate's job to teach.", correct: "delegate" },
+  { text: "A reporter cold-emails asking for comment on a deal rumor.", correct: "delegate" },
+  { text: "A scheduling conflict comes up for a call you're not essential to.", correct: "delegate" },
+  { text: "Someone accidentally added you to a thread meant for a totally different team.", correct: "ignore" },
+  { text: "Your team lead asks you to confirm you'll have the model ready by 9am tomorrow.", correct: "reply" }
+];
+const TRIAGE_ACTIONS = [
+  { key: "reply", label: "Reply Now" },
+  { key: "delegate", label: "Delegate" },
+  { key: "ignore", label: "Ignore" }
+];
+const TRIAGE_TIMER_SECONDS = 12;
+
+function launchInboxTriage(title, onDone) {
+  const ROUNDS = 5;
+  const pool = TRIAGE_SCENARIOS.slice();
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const rounds = pool.slice(0, ROUNDS);
+  let idx = 0, correct = 0, timer = null;
+  const startEnergy = STATE.energy;
+
+  function nextRound() {
+    if (idx >= rounds.length) return finish();
+    const scenario = rounds[idx];
+    const actions = TRIAGE_ACTIONS.slice();
+    for (let i = actions.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [actions[i], actions[j]] = [actions[j], actions[i]];
+    }
+    let timeLeft = TRIAGE_TIMER_SECONDS;
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${title} <span class="minigame-progress">Item ${idx + 1}/${rounds.length}</span></div>
+        <div class="minigame-timerbar"><div class="minigame-timerfill" id="mg-timer" style="width:100%"></div></div>
+        <div class="minigame-sub">Your inbox just got this. What do you do with it?</div>
+        <div class="minigame-question">${scenario.text}</div>
+        <div class="minigame-options" id="mg-options"></div>
+      </div>
+    `);
+    const optsEl = document.getElementById("mg-options");
+    actions.forEach(a => {
+      const btn = document.createElement("button");
+      btn.className = "btn option-btn";
+      btn.textContent = a.label;
+      btn.onclick = () => answer(a.key === scenario.correct);
+      optsEl.appendChild(btn);
+    });
+
+    function answer(isCorrect) {
+      clearInterval(timer);
+      if (isCorrect) correct++;
+      idx++;
+      setTimeout(nextRound, 250);
+    }
+
+    timer = setInterval(() => {
+      timeLeft -= 0.2;
+      const fill = document.getElementById("mg-timer");
+      if (fill) fill.style.width = clamp(timeLeft / TRIAGE_TIMER_SECONDS * 100, 0, 100) + "%";
+      if (timeLeft <= 0) answer(false);
+    }, 200);
+  }
+
+  function finish() {
+    clearModal();
+    const raw = correct / rounds.length;
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
+    onDone(score, raw, correct, rounds.length);
+  }
+
+  nextRound();
+}
+
+/* ---------------- Client Call Sequence minigame (Simon-style memory) ---------------- */
+
+const SEQUENCE_CLIENTS = ["Client A", "Client B", "Client C", "Client D"];
+
+function launchClientSequence(title, onDone) {
+  const MAX_ROUNDS = 5;
+  const sequence = [];
+  let roundsCompleted = 0;
+  const startEnergy = STATE.energy;
+
+  function renderBoard(activeIndex, disabled) {
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${title} <span class="minigame-progress">Round ${roundsCompleted + 1}/${MAX_ROUNDS}</span></div>
+        <div class="minigame-sub">Watch the order the clients light up, then repeat it back by clicking them in the same order.</div>
+        <div class="simon-grid" id="simon-grid">
+          ${SEQUENCE_CLIENTS.map((name, i) => `<button class="simon-box${activeIndex === i ? " active" : ""}" data-i="${i}" ${disabled ? "disabled" : ""}>${name}</button>`).join("")}
+        </div>
+      </div>
+    `);
+  }
+
+  function playback() {
+    renderBoard(-1, true);
+    let i = 0;
+    const step = () => {
+      if (i >= sequence.length) { setTimeout(startInput, 300); return; }
+      renderBoard(sequence[i], true);
+      setTimeout(() => {
+        renderBoard(-1, true);
+        setTimeout(() => { i++; step(); }, 200);
+      }, 550);
+    };
+    setTimeout(step, 400);
+  }
+
+  function startInput() {
+    renderBoard(-1, false);
+    let inputIdx = 0;
+    const grid = document.getElementById("simon-grid");
+    grid.querySelectorAll(".simon-box").forEach(btn => {
+      btn.onclick = () => {
+        const i = Number(btn.dataset.i);
+        if (i === sequence[inputIdx]) {
+          btn.classList.add("active");
+          setTimeout(() => btn.classList.remove("active"), 200);
+          inputIdx++;
+          if (inputIdx === sequence.length) {
+            roundsCompleted++;
+            if (roundsCompleted >= MAX_ROUNDS) { finish(); return; }
+            sequence.push(randInt(0, 3));
+            setTimeout(playback, 500);
+          }
+        } else {
+          finish();
+        }
+      };
+    });
+  }
+
+  function finish() {
+    clearModal();
+    const raw = roundsCompleted / MAX_ROUNDS;
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
+    onDone(score, raw);
+  }
+
+  sequence.push(randInt(0, 3), randInt(0, 3), randInt(0, 3));
+  playback();
+}
+
+/* ---------------- Public entry point ---------------- */
+
+MINIGAMES.launch = function (kind, onComplete) {
+  const title = kind === "study" ? "Study Session" : (currentFirm() ? currentFirm().name + " — This Month's Grind" : "This Month's Grind");
+  const variant = pickRandom(["crunch", "reflex", "triage", "sequence"]);
+  const wrapUp = (score, raw, correct, total) => {
+    let verdict;
+    if (score >= 0.75) verdict = "Excellent work this month.";
+    else if (score >= 0.5) verdict = "Solid, steady performance.";
+    else if (score >= 0.3) verdict = "A shaky month — mistakes crept in.";
+    else verdict = "A brutal month. Your work was sloppy.";
+    showMinigameResult(title, verdict, score, () => onComplete(score));
+  };
+  if (variant === "reflex") launchReflex(title, wrapUp);
+  else if (variant === "triage") launchInboxTriage(title, wrapUp);
+  else if (variant === "sequence") launchClientSequence(title, wrapUp);
+  else launchModelCrunch(title, wrapUp);
+};
+
+function showMinigameResult(title, verdict, score, cont) {
+  openModalHTML(`
+    <div class="modal-box minigame-box">
+      <div class="minigame-header">${title} — Results</div>
+      <div class="minigame-result-score">${Math.round(score * 100)}/100</div>
+      <div class="minigame-sub">${verdict}</div>
+      <button class="btn btn-primary" id="mg-continue">Continue</button>
+    </div>
+  `);
+  document.getElementById("mg-continue").onclick = () => { clearModal(); cont(); };
+}
+
+
+/* ---- js/interview.js ---- */
+/* ==========================================================================
+   INTERVIEW.JS — the interview modal flow for landing a job offer.
+   ========================================================================== */
+
+const INTERVIEW = {};
+
+const IV_TIMER_SECONDS = 30;
+const IV_QUESTION_COUNT = 5;
+const DEFAULT_IV_WEIGHTS = { easy: 0.6, medium: 0.3, hard: 0.1 };
+
+function pickInterviewQuestions(weights, count) {
+  const byTier = { easy: [], medium: [], hard: [] };
+  DATA.INTERVIEW_QUESTIONS.forEach(q => byTier[q.tier || "medium"].push(q));
+  Object.keys(byTier).forEach(t => {
+    const arr = byTier[t];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  });
+  const tiers = ["easy", "medium", "hard"];
+  const picks = [];
+  for (let i = 0; i < count; i++) {
+    const r = Math.random();
+    let cum = 0, chosen = tiers[0];
+    for (const t of tiers) {
+      cum += weights[t] || 0;
+      if (r <= cum) { chosen = t; break; }
+    }
+    let q = byTier[chosen].pop();
+    if (!q) {
+      for (const t2 of tiers) { if (byTier[t2].length) { q = byTier[t2].pop(); break; } }
+    }
+    if (q) picks.push(q);
+  }
+  return picks;
+}
+
+INTERVIEW.start = function (firmId, track, onDone) {
+  const firm = DATA.FIRMS.find(f => f.id === firmId);
+  const weights = firm.interviewWeights || DEFAULT_IV_WEIGHTS;
+  const questions = pickInterviewQuestions(weights, IV_QUESTION_COUNT);
+  let idx = 0, correct = 0;
+
+  function nextQuestion() {
+    if (idx >= questions.length) return finish();
+    const q = questions[idx];
+
+    // Shuffle option order (and track the new correct index) fresh each time,
+    // so the right answer's position isn't a fixed, memorizable spot.
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    const shuffledOptions = order.map(i => q.options[i]);
+    const shuffledCorrectIndex = order.indexOf(q.correct);
+
+    let timeLeft = IV_TIMER_SECONDS;
+    let timer = null;
+    openModalHTML(`
+      <div class="modal-box interview-box">
+        <div class="minigame-header">Interview at ${firm.name} <span class="minigame-progress">Q${idx + 1}/${questions.length}</span></div>
+        <div class="minigame-timerbar"><div class="minigame-timerfill" id="iv-timer" style="width:100%"></div></div>
+        <div class="minigame-question">${q.q}</div>
+        <div class="minigame-options" id="iv-options"></div>
+      </div>
+    `);
+    const optsEl = document.getElementById("iv-options");
+    shuffledOptions.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "btn option-btn";
+      btn.textContent = opt;
+      btn.onclick = () => answer(i === shuffledCorrectIndex);
+      optsEl.appendChild(btn);
+    });
+
+    function answer(isCorrect) {
+      clearInterval(timer);
+      if (isCorrect) correct++;
+      idx++;
+      setTimeout(nextQuestion, 200);
+    }
+
+    timer = setInterval(() => {
+      timeLeft -= 0.2;
+      const fill = document.getElementById("iv-timer");
+      if (fill) fill.style.width = clamp(timeLeft / IV_TIMER_SECONDS * 100, 0, 100) + "%";
+      if (timeLeft <= 0) answer(false);
+    }, 200);
+  }
+
+  function finish() {
+    const scorePct = correct / questions.length;
+    const result = ENGINE.resolveInterview(firmId, track, scorePct);
+    let headline, sub;
+    if (result.hired) {
+      headline = "You got the offer!";
+      sub = `${firm.name} extended you an offer as ${track === "IB" ? currentTitleTrackName() : currentTitleTrackName()}. Score: ${Math.round(scorePct * 100)}/100.`;
+    } else {
+      headline = "No offer this time.";
+      sub = `Score: ${Math.round(scorePct * 100)}/100. Build your network and skills, then try again.`;
+    }
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${headline}</div>
+        <div class="minigame-sub">${sub}</div>
+        <button class="btn btn-primary" id="iv-continue">Continue</button>
+      </div>
+    `);
+    document.getElementById("iv-continue").onclick = () => { clearModal(); onDone(result); };
+  }
+
+  nextQuestion();
+};
+
+
+/* ---- js/ui.js ---- */
+/* ==========================================================================
+   UI.JS — rendering for header, tabs, and all modals.
+   ========================================================================== */
+
+const UI = { activeTab: "dashboard" };
+
+function el(id) { return document.getElementById(id); }
+
+UI.toast = function (msg, isError) {
+  const t = el("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  clearTimeout(UI._toastTimer);
+  UI._toastTimer = setTimeout(() => { t.className = "toast"; }, 2600);
+};
+
+UI.setTab = function (tab) { UI.activeTab = tab; UI.renderAll(); };
+
+UI.applyUIMode = function () {
+  const mobile = STATE.uiMode === "mobile";
+  document.documentElement.classList.toggle("ui-mobile", mobile);
+};
+
+UI.toggleUIMode = function () {
+  STATE.uiMode = STATE.uiMode === "mobile" ? "desktop" : "mobile";
+  save();
+  UI.renderAll();
+};
+
+/* ---------------- Master render ---------------- */
+
+UI.renderAll = function () {
+  if (!STATE.characterCreated) { UI.showCharacterCreation(); return; }
+  UI.applyUIMode();
+  clearModal();
+  if (!STATE.apartmentId) { UI.showApartmentGate(); }
+  UI.renderHeader();
+  UI.renderTabs();
+  UI.renderTabContent();
+  if (STATE.gameOver) UI.showGameOver();
+  else if (STATE.pendingLegend) UI.showLegend();
+};
+
+/* ---------------- Header ---------------- */
+
+UI.renderHeader = function () {
+  const year = Math.floor(STATE.totalMonths / 12) + 1;
+  const month = (STATE.totalMonths % 12) + 1;
+  let statusLine;
+  if (STATE.education.inMBA) statusLine = `MBA Student (Year ${Math.ceil((24 - STATE.education.mbaMonthsLeft + 1) / 12)})`;
+  else if (STATE.employment) statusLine = `${currentTitleTrackName()} @ ${currentFirm().name}`;
+  else statusLine = "Unemployed — job hunting";
+
+  el("header").innerHTML = `
+    <div class="hdr-row1">
+      <div class="hdr-name">${STATE.name}</div>
+      <div class="hdr-age">Age ${ageString()} · Career Year ${year}, Month ${month}</div>
+      <div class="hdr-status">${statusLine}</div>
+      <button class="layout-toggle" onclick="UI.toggleUIMode()" title="Switch layout" aria-label="Switch layout">${STATE.uiMode === "mobile" ? "🖥️" : "📱"}</button>
+    </div>
+    <div class="hdr-row2">
+      <div class="chip">Cash <b>${fmtMoney(STATE.cash)}</b></div>
+      <div class="chip">Savings <b>${fmtMoney(STATE.savings)}</b></div>
+      <div class="chip debt">Debt <b>${fmtMoney(STATE.debt)}</b>${STATE.loanPaymentDue ? ' <span class="due-badge">DUE</span>' : ""}</div>
+      <div class="chip">Net Worth <b class="${netWorth() >= 0 ? "pos" : "neg"}">${fmtMoney(netWorth())}</b></div>
+    </div>
+    <div class="hdr-bars">
+      <div class="bar-wrap"><span>Energy ${Math.round(STATE.energy)}/${STATE.maxEnergy}</span><div class="bar"><div class="bar-fill energy" style="width:${clamp(STATE.energy / STATE.maxEnergy * 100, 0, 100)}%"></div></div></div>
+      <div class="bar-wrap"><span>Stress</span><div class="bar"><div class="bar-fill stress" style="width:${STATE.stress}%"></div></div></div>
+      <div class="bar-wrap"><span>Happiness</span><div class="bar"><div class="bar-fill happy" style="width:${STATE.happiness}%"></div></div></div>
+      <div class="bar-wrap"><span>Reputation</span><div class="bar"><div class="bar-fill rep" style="width:${clamp(STATE.reputation + 20, 0, 100)}%"></div></div></div>
+    </div>
+  `;
+};
+
+/* ---------------- Tabs ---------------- */
+
+const TAB_LIST = [
+  ["dashboard", "Dashboard"], ["career", "Career"], ["skills", "Skills"],
+  ["networking", "Networking"], ["bank", "Bank"], ["housing", "Housing"],
+  ["garage", "Garage"], ["dating", "Dating"], ["journal", "Journal"]
+];
+
+UI.renderTabs = function () {
+  el("tabs").innerHTML = TAB_LIST.map(([id, label]) =>
+    `<button class="tab-btn ${UI.activeTab === id ? "active" : ""}" onclick="UI.setTab('${id}')">${label}</button>`
+  ).join("") + `<button class="tab-btn end-month-btn" onclick="UI.endMonth()">End Month &rarr;</button>`;
+};
+
+UI.renderTabContent = function () {
+  const map = {
+    dashboard: UI.renderDashboard, career: UI.renderCareer, skills: UI.renderSkills,
+    networking: UI.renderNetworking, bank: UI.renderBank, housing: UI.renderHousing,
+    garage: UI.renderGarage, dating: UI.renderDating, journal: UI.renderJournal
+  };
+  el("tab-content").innerHTML = map[UI.activeTab]();
+};
+
+/* ---------------- Dashboard ---------------- */
+
+UI.renderDashboard = function () {
+  const apt = STATE.apartmentId ? DATA.APARTMENTS.find(a => a.id === STATE.apartmentId) : null;
+  const car = STATE.car.id !== "none" ? DATA.CARS.find(c => c.id === STATE.car.id) : null;
+  const partner = STATE.dating.partnerId ? STATE.dating.pool.find(p => p.id === STATE.dating.partnerId) : null;
+  const recent = STATE.log.slice(0, 6);
+
+  let careerCard;
+  if (STATE.education.inMBA) {
+    const pct = Math.round((24 - STATE.education.mbaMonthsLeft) / 24 * 100);
+    careerCard = `<div class="card"><h3>Business School</h3><p>Full-time MBA program in progress.</p><div class="progress-outer"><div class="progress-inner" style="width:${pct}%"></div></div><p class="muted">${STATE.education.mbaMonthsLeft} months remaining. Recruiting for: ${STATE.education.recruitTarget}</p></div>`;
+  } else if (STATE.employment) {
+    const e = STATE.employment;
+    const titles = e.track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
+    const monthsArr = e.track === "IB" ? DATA.MONTHS_PER_TITLE_IB : DATA.MONTHS_PER_TITLE_PE;
+    const need = monthsArr[e.titleIndex];
+    const pct = clamp(Math.round(e.monthsInTitle / need * 100), 0, 100);
+    const avgPerf = e.perfAccum.length ? Math.round(e.perfAccum.reduce((a, b) => a + b, 0) / e.perfAccum.length * 100) : null;
+    careerCard = `<div class="card">
+      <h3>${currentFirm().name}</h3>
+      <p>${titles[e.titleIndex]} · Base ${fmtMoney(currentBaseSalary())}/yr</p>
+      <div class="progress-outer" title="Promotion progress"><div class="progress-inner" style="width:${pct}%"></div></div>
+      <p class="muted">Promotion track: ${e.monthsInTitle}/${need} months · Avg performance: ${avgPerf === null ? "—" : avgPerf + "/100"} · Strikes: ${e.strikes}/3</p>
+    </div>`;
+  } else {
+    careerCard = `<div class="card"><h3>Unemployed</h3><p>Head to the Career tab to network your way into interviews.</p></div>`;
+  }
+
+  return `
+    <div class="grid-2">
+      ${careerCard}
+      <div class="card">
+        <h3>Student Loans</h3>
+        <p>Balance: <b>${fmtMoney(STATE.debt)}</b> at ${(STATE.loanAPR * 100).toFixed(1)}% APR</p>
+        <p class="muted">Minimum payment: ${fmtMoney(STATE.loanMinPayment)}/month ${STATE.loanPaymentDue ? '<span class="due-badge">PAYMENT DUE — visit the Bank tab</span>' : "(current)"}</p>
+      </div>
+      <div class="card">
+        <h3>Living Situation</h3>
+        <p>${apt ? apt.name : "No apartment"} ${apt ? `— ${fmtMoney(apt.monthlyRent)}/month` : ""}</p>
+        <p>${car ? car.name + (STATE.car.balance > 0 ? ` (balance ${fmtMoney(STATE.car.balance)})` : " (paid off)") : "No car"}</p>
+      </div>
+      <div class="card">
+        <h3>Relationship</h3>
+        <p>${partner ? `${partner.name} (${partner.status}) — Relationship ${partner.relationship}/100` : "Single"}</p>
+      </div>
+      <div class="card">
+        <h3>Skills</h3>
+        ${UI.skillBarsHTML()}
+      </div>
+      <div class="card">
+        <h3>Recent Events</h3>
+        <ul class="log-list">${recent.map(l => `<li>${l.text}</li>`).join("") || "<li>Nothing yet.</li>"}</ul>
+      </div>
+    </div>
+  `;
+};
+
+UI.skillBarsHTML = function () {
+  const s = STATE.skills;
+  return ["networking", "communication", "sales", "discipline"].map(k => `
+    <div class="skill-row">
+      <span class="skill-label">${k[0].toUpperCase() + k.slice(1)}</span>
+      <div class="bar"><div class="bar-fill skill" style="width:${s[k]}%"></div></div>
+      <span class="skill-val">${s[k]}</span>
+    </div>`).join("");
+};
+
+/* ---------------- Career ---------------- */
+
+UI.renderCareer = function () {
+  let html = "";
+
+  if (STATE.employment) {
+    html += UI.renderCurrentJobCard();
+  } else if (STATE.education.inMBA) {
+    html += `<div class="card"><h3>Currently enrolled full-time in an MBA program.</h3><p class="muted">${STATE.education.mbaMonthsLeft} months left. Advance the month to keep studying.</p></div>`;
+    return html;
+  }
+
+  if (ENGINE.canStartMBA()) {
+    html += `<div class="card highlight">
+      <h3>Business School</h3>
+      <p>You've put in 3+ years of grinding. An MBA could reset your trajectory — at a steep cost.</p>
+      <p class="muted">Cost: $220,000 (added to debt) · Duration: 2 years, no salary · You must resign first.</p>
+      <div class="btn-row">
+        <button class="btn" onclick="UI.startMBA('IB')">Enroll — Recruit for IB Associate</button>
+        <button class="btn" onclick="UI.startMBA('PE')">Enroll — Recruit for PE Associate</button>
+      </div>
+    </div>`;
+  }
+
+  html += `<h3 class="section-title">Investment Banks</h3><div class="firm-grid">`;
+  DATA.FIRMS.filter(f => f.type === "IB").forEach(f => { html += UI.firmCardHTML(f); });
+  html += `</div>`;
+
+  html += `<h3 class="section-title">Private Equity</h3><div class="firm-grid">`;
+  DATA.FIRMS.filter(f => f.type === "PE").forEach(f => { html += UI.firmCardHTML(f); });
+  html += `</div>`;
+
+  return html;
+};
+
+UI.renderCurrentJobCard = function () {
+  const e = STATE.employment;
+  const firm = currentFirm();
+  const titles = e.track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
+  return `<div class="card highlight">
+    <h3>${firm.name} — ${titles[e.titleIndex]}</h3>
+    <p>${firm.blurb}</p>
+    <p>Base Salary: <b>${fmtMoney(currentBaseSalary())}</b>/yr</p>
+    <p class="muted">Months at firm: ${e.monthsAtFirm} · Strikes: ${e.strikes}/3</p>
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="UI.resign()">Resign</button>
+    </div>
+  </div>`;
+};
+
+function competitivenessLabel(c) {
+  if (c >= 0.8) return "Extremely High";
+  if (c >= 0.6) return "High";
+  if (c >= 0.35) return "Medium";
+  return "Low";
+}
+
+UI.firmCardHTML = function (f) {
+  const elig = ENGINE.firmEligibility(f.id);
+  const isCurrent = STATE.employment && STATE.employment.firmId === f.id;
+  const competitiveness = f.competitiveness != null ? f.competitiveness : 0.3;
+  return `<div class="card firm-card ${isCurrent ? "current" : ""}">
+    <h4>${f.name}</h4>
+    <p class="muted">${f.tier} · Competitiveness: ${competitivenessLabel(competitiveness)}</p>
+    <p>${f.blurb}</p>
+    <p class="muted">Req: Networking ${f.reqNetworking}+, Communication ${f.reqComm}+${f.minIBMonths ? `, ${Math.round(f.minIBMonths / 12 * 10) / 10}+ yrs IB` : ""}</p>
+    ${isCurrent ? '<p class="muted">Your current employer</p>' :
+      elig.eligible
+        ? `<button class="btn" onclick="UI.applyToFirm('${f.id}','${f.type}')">Interview</button>`
+        : `<p class="locked">${elig.reasons.join(" ")}</p>`}
+  </div>`;
+};
+
+UI.applyToFirm = function (firmId, track) {
+  if (!hasEnergy(12)) { UI.toast("Too exhausted for an interview right now.", true); return; }
+  spendEnergy(12);
+  save();
+  INTERVIEW.start(firmId, track, () => UI.renderAll());
+};
+
+UI.resign = function () { ENGINE.resign(); UI.renderAll(); };
+
+UI.startMBA = function (target) {
+  const r = ENGINE.startMBA(target);
+  if (!r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Skills ---------------- */
+
+UI.renderSkills = function () {
+  return `<div class="card">
+    <h3>Your Skills</h3>
+    ${UI.skillBarsHTML()}
+  </div>
+  <div class="grid-2">
+    ${DATA.TRAINING_ACTIONS.map(a => `
+      <div class="card">
+        <h4>${a.name}</h4>
+        <p class="muted">Builds ${a.skill[0].toUpperCase() + a.skill.slice(1)} · Cost ${fmtMoney(a.cost)} · Energy ${a.energy}</p>
+        <button class="btn" onclick="UI.doTraining('${a.id}')">Do It</button>
+      </div>`).join("")}
+  </div>`;
+};
+
+UI.doTraining = function (id) {
+  const r = ENGINE.doTraining(id);
+  if (!r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Networking ---------------- */
+
+UI.renderNetworking = function () {
+  return `<div class="grid-2">
+    ${DATA.NETWORKING_EVENTS.map(ev => `
+      <div class="card">
+        <h4>${ev.name}</h4>
+        <p>${ev.blurb}</p>
+        <p class="muted">Cost ${fmtMoney(ev.cost)} · Energy ${ev.energy} · Networking +${ev.networkingGain[0]}-${ev.networkingGain[1]}</p>
+        <button class="btn" onclick="UI.doNetworking('${ev.id}')">Attend</button>
+      </div>`).join("")}
+  </div>`;
+};
+
+UI.doNetworking = function (id) {
+  const r = ENGINE.doNetworkingEvent(id);
+  if (!r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Bank ---------------- */
+
+UI.renderBank = function () {
+  return `
+    <div class="grid-2">
+      <div class="card">
+        <h3>Checking</h3>
+        <p class="big-num">${fmtMoney(STATE.cash)}</p>
+      </div>
+      <div class="card">
+        <h3>Savings <span class="muted">(${(DATA.SAVINGS_APY * 100).toFixed(1)}% APY)</span></h3>
+        <p class="big-num">${fmtMoney(STATE.savings)}</p>
+        <div class="btn-row">
+          <input type="number" id="save-amt" class="num-input" placeholder="Amount" min="0">
+          <button class="btn" onclick="UI.bankAction('toSavings')">Deposit</button>
+          <button class="btn" onclick="UI.bankAction('toChecking')">Withdraw</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Index Fund Investment</h3>
+        <p class="big-num">${fmtMoney(STATE.investment)}</p>
+        <p class="muted">Fluctuates monthly with the market.</p>
+        <div class="btn-row">
+          <input type="number" id="invest-amt" class="num-input" placeholder="Amount" min="0">
+          <button class="btn" onclick="UI.bankAction('invest')">Invest</button>
+          <button class="btn" onclick="UI.bankAction('divest')">Sell</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Student Loans</h3>
+        <p>Balance: <b>${fmtMoney(STATE.debt)}</b></p>
+        <p class="muted">APR ${(STATE.loanAPR * 100).toFixed(1)}% · Minimum ${fmtMoney(STATE.loanMinPayment)}/month</p>
+        ${STATE.loanPaymentDue ? '<p class="due-badge">PAYMENT DUE THIS CYCLE</p>' : '<p class="muted">Current</p>'}
+        <div class="btn-row">
+          <button class="btn" onclick="UI.payLoanMin()">Pay Minimum</button>
+          <input type="number" id="loan-amt" class="num-input" placeholder="Extra amount" min="0">
+          <button class="btn" onclick="UI.payLoanExtra()">Pay Amount</button>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+UI.bankAction = function (kind) {
+  let amt, r;
+  if (kind === "toSavings") { amt = Number(el("save-amt").value); r = ENGINE.transferToSavings(amt); }
+  if (kind === "toChecking") { amt = Number(el("save-amt").value); r = ENGINE.transferToChecking(amt); }
+  if (kind === "invest") { amt = Number(el("invest-amt").value); r = ENGINE.investFunds(amt); }
+  if (kind === "divest") { amt = Number(el("invest-amt").value); r = ENGINE.divestFunds(amt); }
+  if (r && !r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+UI.payLoanMin = function () {
+  const r = ENGINE.payLoan(Math.min(STATE.loanMinPayment, STATE.cash));
+  if (!r.ok) UI.toast(r.msg || "Insufficient funds.", true);
+  UI.renderAll();
+};
+
+UI.payLoanExtra = function () {
+  const amt = Number(el("loan-amt").value);
+  const r = ENGINE.payLoan(amt);
+  if (!r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Housing ---------------- */
+
+UI.renderHousing = function (forced) {
+  const current = STATE.apartmentId;
+  return `
+    ${forced ? '<p class="muted">You need somewhere to live before you can start your career.</p>' : ""}
+    <div class="grid-2">
+      ${DATA.APARTMENTS.map(a => {
+        const locked = a.minTitleTrack && !meetsSeniority(a.minTitleTrack);
+        const isCurrent = a.id === current;
+        return `<div class="card ${isCurrent ? "current" : ""}">
+          <h4>${a.name}</h4>
+          <p>${a.blurb}</p>
+          <p class="muted">Rent ${fmtMoney(a.monthlyRent)}/month · Move-in cost ${fmtMoney(a.moveInCost)}</p>
+          ${isCurrent ? '<p class="muted">Current residence</p>' :
+            locked ? `<p class="locked">Requires ${a.minTitleTrack}+ title</p>` :
+            `<button class="btn" onclick="UI.moveApartment('${a.id}')">Move In</button>`}
+        </div>`;
+      }).join("")}
+    </div>
+  `;
+};
+
+UI.moveApartment = function (id) {
+  const r = ENGINE.moveApartment(id);
+  if (!r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Garage ---------------- */
+
+UI.renderGarage = function () {
+  return `
+    <div class="grid-2">
+      ${DATA.CARS.map(c => {
+        const locked = c.minTitleTrack && !meetsSeniority(c.minTitleTrack);
+        const isCurrent = c.id === STATE.car.id;
+        return `<div class="card ${isCurrent ? "current" : ""}">
+          <h4>${c.name}</h4>
+          ${c.cashPrice ? `<p class="muted">Cash price ${fmtMoney(c.cashPrice)} · Finance: ${fmtMoney(c.downPayment)} down, ${fmtMoney(c.monthlyPayment)}/month</p>` : ""}
+          ${isCurrent ? `<p class="muted">${STATE.car.balance > 0 ? "Balance: " + fmtMoney(STATE.car.balance) : "Owned outright"}</p>` :
+            locked ? `<p class="locked">Requires ${c.minTitleTrack}+ title</p>` :
+            `<div class="btn-row">
+              ${c.cashPrice ? `<button class="btn" onclick="UI.buyCar('${c.id}',false)">Buy Cash</button><button class="btn" onclick="UI.buyCar('${c.id}',true)">Finance</button>` :
+              `<button class="btn" onclick="UI.buyCar('${c.id}',false)">Switch</button>`}
+            </div>`}
+        </div>`;
+      }).join("")}
+    </div>
+  `;
+};
+
+UI.buyCar = function (id, financed) {
+  const r = ENGINE.buyCar(id, financed);
+  if (!r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Dating ---------------- */
+
+UI.renderDating = function () {
+  const partner = STATE.dating.partnerId;
+  return `<div class="grid-2">
+    ${STATE.dating.pool.map(c => `
+      <div class="card ${c.id === partner ? "current" : ""}">
+        <h4>${c.name} <span class="muted">· ${c.job}</span></h4>
+        <p>${c.bio}</p>
+        <p class="muted">Compatibility ${c.compatibility}% · Status: ${c.status}</p>
+        <div class="progress-outer"><div class="progress-inner" style="width:${c.relationship}%"></div></div>
+        <div class="btn-row">
+          ${!partner || c.id === partner ? `
+            <button class="btn" onclick="UI.dating('message','${c.id}')">Message</button>
+            <button class="btn" onclick="UI.dating('date','${c.id}')">Ask on Date</button>
+            ${c.status !== "partner" && c.status !== "married" ? `<button class="btn" onclick="UI.dating('official','${c.id}')">Make Official</button>` : ""}
+            ${c.status === "partner" ? `<button class="btn" onclick="UI.dating('propose','${c.id}')">Propose</button><button class="btn btn-danger" onclick="UI.dating('breakup','${c.id}')">Break Up</button>` : ""}
+          ` : `<p class="locked">You're seeing someone else.</p>`}
+        </div>
+      </div>`).join("")}
+  </div>`;
+};
+
+UI.dating = function (action, id) {
+  let r;
+  if (action === "message") r = ENGINE.messageCandidate(id);
+  if (action === "date") r = ENGINE.goOnDate(id);
+  if (action === "official") r = ENGINE.defineRelationship(id);
+  if (action === "propose") r = ENGINE.propose();
+  if (action === "breakup") { ENGINE.breakUp(); r = { ok: true }; }
+  if (r && !r.ok) UI.toast(r.msg, true);
+  UI.renderAll();
+};
+
+/* ---------------- Journal ---------------- */
+
+UI.renderJournal = function () {
+  return `<div class="card"><ul class="log-list full">${STATE.log.map(l => `<li><span class="muted">Mo ${l.month}</span> ${l.text}</li>`).join("") || "<li>Nothing yet.</li>"}</ul></div>`;
+};
+
+/* ---------------- Month advance ---------------- */
+
+UI.endMonth = function () {
+  if (STATE.gameOver) return;
+  if (ENGINE.needsMinigameThisMonth()) {
+    const kind = STATE.education.inMBA ? "study" : "work";
+    MINIGAMES.launch(kind, (score) => { ENGINE.finishMonth(score); UI.renderAll(); });
+  } else {
+    ENGINE.finishMonth(null);
+    UI.renderAll();
+  }
+};
+
+/* ---------------- Character creation ---------------- */
+
+UI.showCharacterCreation = function () {
+  let chosenMode = (window.matchMedia && window.matchMedia("(max-width: 700px)").matches) ? "mobile" : "desktop";
+  openModalHTML(`
+    <div class="modal-box">
+      <h2>Welcome to Wall Street</h2>
+      <p>You're 22, fresh out of college with a finance degree — and $450,000 in student debt. No job. No apartment. Just ambition.</p>
+      <p>Your goal: become the greatest investment banker who ever lived.</p>
+      <label class="field-label">Your name</label>
+      <input type="text" id="char-name" class="num-input" placeholder="Alex Ward" value="Alex Ward">
+      <label class="field-label">Choose your layout</label>
+      <div class="layout-choice">
+        <button class="layout-btn" id="mode-desktop" data-mode="desktop">🖥️ Desktop</button>
+        <button class="layout-btn" id="mode-mobile" data-mode="mobile">📱 Mobile</button>
+      </div>
+      <p class="muted">You can switch anytime from the icon in the header.</p>
+      <button class="btn btn-primary" id="char-start">Begin Your Career</button>
+    </div>
+  `);
+  const modeButtons = [el("mode-desktop"), el("mode-mobile")];
+  function refreshModeButtons() {
+    modeButtons.forEach(b => b.classList.toggle("active", b.dataset.mode === chosenMode));
+  }
+  modeButtons.forEach(b => { b.onclick = () => { chosenMode = b.dataset.mode; refreshModeButtons(); }; });
+  refreshModeButtons();
+
+  el("char-start").onclick = () => {
+    const name = el("char-name").value.trim() || "Alex Ward";
+    STATE.characterCreated = true;
+    newGame(name);
+    STATE.characterCreated = true;
+    STATE.uiMode = chosenMode;
+    save();
+    UI.renderAll();
+  };
+};
+
+/* ---------------- Forced apartment gate ---------------- */
+
+UI.showApartmentGate = function () {
+  openModalHTML(`
+    <div class="modal-box wide">
+      <h2>Find a Place to Live</h2>
+      <p>Before anything else, you need a roof over your head.</p>
+      ${UI.renderHousing(true)}
+    </div>
+  `);
+};
+
+/* ---------------- Game over / legend ---------------- */
+
+UI.showGameOver = function () {
+  openModalHTML(`
+    <div class="modal-box">
+      <h2>Game Over</h2>
+      <p>${STATE.gameOverReason}</p>
+      <p class="muted">You made it to age ${ageString()} with a net worth of ${fmtMoney(netWorth())}.</p>
+      <button class="btn btn-primary" id="restart-btn">Start a New Career</button>
+    </div>
+  `);
+  el("restart-btn").onclick = () => {
+    wipeSave();
+    location.reload();
+  };
+};
+
+UI.showLegend = function () {
+  openModalHTML(`
+    <div class="modal-box">
+      <h2>You Made It</h2>
+      <p>You've reached the very top: <b>${currentTitleTrackName()}</b> at ${currentFirm().name}.</p>
+      <p>Net worth: ${fmtMoney(netWorth())}. Few ever get here. Keep going — legacies are built, not given.</p>
+      <button class="btn btn-primary" id="legend-continue">Keep Playing</button>
+    </div>
+  `);
+  el("legend-continue").onclick = () => { STATE.pendingLegend = false; save(); clearModal(); };
+};
+
+
+/* ---- js/main.js ---- */
+/* ==========================================================================
+   MAIN.JS — boot sequence.
+   ========================================================================== */
+
+(function boot() {
+  const loaded = load();
+  if (!loaded || !STATE.characterCreated) {
+    STATE.characterCreated = false;
+  }
+  UI.renderAll();
+
+  window.addEventListener("beforeunload", save);
+
+  // Expose a manual reset for convenience in dev tools.
+  window.resetGame = function () { wipeSave(); location.reload(); };
+})();
+
+  </script>
+</body>
+</html>
