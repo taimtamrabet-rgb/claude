@@ -183,7 +183,7 @@ const DEGREE_QUALIFIES = {
 };
 
 const JOB_TRACKS = {
-  "Finance Analyst": [{ title: "Banking Analyst", salary: 100000 }, { title: "Investment Banker", salary: 220000 }, { title: "Managing Director", salary: 400000 }],
+  "Finance Analyst": [{ title: "Banking Analyst", salary: 100000 }, { title: "Banking Associate", salary: 175000 }, { title: "Investment Banker", salary: 220000 }, { title: "Managing Director", salary: 400000 }],
   "Accountant": [{ title: "Staff Accountant", salary: 55000 }, { title: "Accountant", salary: 70000 }, { title: "Senior Accountant", salary: 90000 }, { title: "Accounting Manager", salary: 115000 }],
   "Corporate Lawyer": [{ title: "Associate Attorney", salary: 95000 }, { title: "Corporate Lawyer", salary: 150000 }, { title: "Senior Partner", salary: 260000 }],
   "Software Engineer": [{ title: "Junior Software Engineer", salary: 75000 }, { title: "Software Engineer", salary: 105000 }, { title: "Senior Software Engineer", salary: 145000 }, { title: "Engineering Manager", salary: 180000 }],
@@ -227,6 +227,14 @@ const HIGHER_ED_REQUIRED_JOBS = {
   "Physician": "medical", "Corporate Lawyer": "law", "Psychologist": "grad", "Research Scientist": "grad",
   "Veterinarian": "vet", "Dentist": "dental", "Pharmacist": "pharmacy",
 };
+// per-job tier index -> higher-ed credential required to be promoted into (or hired directly into) that tier
+const JOB_TIER_HIGHER_ED = {
+  "Finance Analyst": { 1: "mba" }, // Banking Associate requires an MBA
+};
+function tierBlockedByHigherEd(jobBase, tierIndex, ctx) {
+  const req = JOB_TIER_HIGHER_ED[jobBase] && JOB_TIER_HIGHER_ED[jobBase][tierIndex];
+  return req && ctx.higherEd !== req;
+}
 
 const PRO_TRACKS = {
   "Basketball": [{ title: "Pro Basketball Rookie", salary: 1000000 }, { title: "Pro Basketball Starter", salary: 4000000 }, { title: "Pro Basketball All-Star", salary: 12000000 }, { title: "Pro Basketball Superstar", salary: 35000000 }],
@@ -637,6 +645,12 @@ const EVENTS = [
         if (!c.jobBase || !getTrack(c.jobBase)) { c.happiness -= 1; c.log("Looked into a promotion, but there's no clear next step here."); return; }
         const track = getTrack(c.jobBase);
         if (c.jobTier >= track.length - 1) { c.happiness += 1; c.log("Already at the top of this career track."); return; }
+        if (tierBlockedByHigherEd(c.jobBase, c.jobTier + 1, c)) {
+          const req = JOB_TIER_HIGHER_ED[c.jobBase][c.jobTier + 1];
+          c.happiness -= 1;
+          c.log(`Looked into a promotion to ${track[c.jobTier + 1].title}, but it requires ${HIGHER_ED_PROGRAMS[req].label} first.`);
+          return;
+        }
         const chance = 0.35 + (c.smarts - 5) * 0.04 + ((c.jobPerformance || 50) - 50) / 250;
         if (Math.random() < chance) {
           c.jobTier += 1;
@@ -698,7 +712,7 @@ function buildJobMarket(ctx) {
   let i = 0;
   while (postings.length < 16 && i < primary.length) { postings.push({ jobBase: primary[i], tier: 0, offTrack: false }); i++; }
   if (ctx.smarts >= 7) {
-    pool.forEach((j) => { const track = JOB_TRACKS[j]; if (track && track.length > 1 && postings.length < 20) postings.push({ jobBase: j, tier: 1, offTrack: false }); });
+    pool.forEach((j) => { const track = JOB_TRACKS[j]; if (track && track.length > 1 && postings.length < 20 && !tierBlockedByHigherEd(j, 1, ctx)) postings.push({ jobBase: j, tier: 1, offTrack: false }); });
   }
   while (postings.length < 20) postings.push({ jobBase: primary[postings.length % primary.length], tier: 0, offTrack: false });
   return postings.slice(0, 20);
@@ -747,7 +761,7 @@ function newCtx(char) {
     athleticism: clampStat(char.talent === "sports" ? 8 : Math.round(3 + char.stats.health * 0.5)),
     madeTeam: null, month: 0, housing: null, schoolType: "public",
     studyUsesThisYear: 0, trainUsesThisYear: 0, partTimeUsesThisYear: 0,
-    tournamentUsesThisYear: 0, marchMadnessUsesThisYear: 0, workHardUsesThisYear: 0, schoolTransferUsesThisYear: 0,
+    tournamentUsesThisYear: 0, marchMadnessUsesThisYear: 0, workHardUsesThisYear: 0, schoolTransferUsesThisYear: 0, promotionUsesThisYear: 0,
     proSport: null, proTeam: null, proPosition: null, proSeasonNumber: 0, collegeFootballYears: 0, gradNotified: false,
     premed: false, higherEd: null, higherEdInProgress: null, higherEdGradAge: null, yearsWorked: 0,
     pilot: { licenseLevel: 0, hours: 0, lessonsThisYear: 0 },
@@ -972,6 +986,39 @@ function workHarder() {
 }
 
 function cycleGender() { const c = ctx; const idx = GENDERS.indexOf(c.gender); c.gender = GENDERS[(idx + 1) % GENDERS.length]; render(); }
+
+function requestPromotion() {
+  const c = ctx;
+  if (!c.job || c.promotionUsesThisYear >= 1) return;
+  c.promotionUsesThisYear = 1;
+  const track = getTrack(c.jobBase);
+  if (!track || c.jobTier >= track.length - 1) { c.log("Already at the top of this career track."); render(); return; }
+  const nextTier = c.jobTier + 1;
+  if (tierBlockedByHigherEd(c.jobBase, nextTier, c)) {
+    const req = JOB_TIER_HIGHER_ED[c.jobBase][nextTier];
+    c.log(`Asked about moving up to ${track[nextTier].title}, but that role requires ${HIGHER_ED_PROGRAMS[req].label} first.`);
+    render();
+    return;
+  }
+  const chance = clamp01(0.3 + (c.jobPerformance - 50) / 130 + (c.smarts - 5) * 0.03);
+  if (Math.random() < chance) {
+    c.jobTier = nextTier;
+    const cityInfo = COUNTRIES[character.country].cities[character.city];
+    const rawCityMult = (cityInfo.bias && cityInfo.bias[c.jobBase]) || 1;
+    const cityMult = 1 + (rawCityMult - 1) * 0.4;
+    const variance = 0.97 + Math.random() * 0.06;
+    c.salary = Math.round(track[nextTier].salary * cityMult * variance);
+    c.job = track[nextTier].title;
+    c.happiness += 2;
+    c.jobPerformance = clamp100(c.jobPerformance - 10);
+    c.log(`Promoted to ${c.job}! New salary: ${formatMoney(c.salary, character.country)}/yr.`);
+  } else {
+    c.happiness -= 2;
+    c.log("Asked for a promotion but didn't get it this time.");
+  }
+  syncStats();
+  render();
+}
 
 function quitJob() {
   const c = ctx;
@@ -1368,7 +1415,7 @@ function doYearAdvance() {
   if (c.job && c.workHardUsesThisYear === 0) c.jobPerformance = clamp100(c.jobPerformance - 3);
 
   c.studyUsesThisYear = 0; c.trainUsesThisYear = 0; c.partTimeUsesThisYear = 0;
-  c.tournamentUsesThisYear = 0; c.marchMadnessUsesThisYear = 0; c.workHardUsesThisYear = 0;
+  c.tournamentUsesThisYear = 0; c.marchMadnessUsesThisYear = 0; c.workHardUsesThisYear = 0; c.promotionUsesThisYear = 0;
   c.pilot.lessonsThisYear = 0;
   c.log(rollNews(c));
 
@@ -1662,6 +1709,17 @@ function pageOccupation() {
     }
     html += `<div class="section-label">Job Performance</div>` + perfBarHTML("Performance", c.jobPerformance);
     html += rowBtnHTML("📈", "Work Harder", c.workHardUsesThisYear >= 1 ? "Used for this year" : "Once a year", "workHarder", null, c.workHardUsesThisYear >= 1);
+    const track = getTrack(c.jobBase);
+    if (track && c.jobTier < track.length - 1) {
+      const nextTier = c.jobTier + 1;
+      const blocked = tierBlockedByHigherEd(c.jobBase, nextTier, c);
+      if (blocked) {
+        const req = JOB_TIER_HIGHER_ED[c.jobBase][nextTier];
+        html += rowHTML("🔒", `Promotion to ${track[nextTier].title}`, `Requires ${HIGHER_ED_PROGRAMS[req].label}`);
+      } else {
+        html += rowBtnHTML("🪜", "Request Promotion", c.promotionUsesThisYear >= 1 ? "Used for this year" : `Once a year — aim for ${track[nextTier].title}`, "requestPromotion", null, c.promotionUsesThisYear >= 1);
+      }
+    }
     html += rowBtnHTML("🚪", "Quit Job", "Leave your current job", "quitJob");
   }
 
@@ -2027,6 +2085,7 @@ const ACTIONS = {
   finishCareerFlow: () => finishCareerFlow(),
 
   workHarder: () => workHarder(),
+  requestPromotion: () => requestPromotion(),
   trainHarder: () => trainHarder(),
   quitJob: () => quitJob(),
   dropOutOfSchool: () => dropOutOfSchool(),
