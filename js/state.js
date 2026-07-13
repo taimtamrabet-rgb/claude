@@ -2,7 +2,10 @@
    STATE.JS — game state shape, persistence, and pure helper calculations.
    ========================================================================== */
 
-const SAVE_KEY = "ib_sim_save_v1";
+const LEGACY_SAVE_KEY = "ib_sim_save_v1";
+const SAVE_SLOT_COUNT = 5;
+const SAVE_KEY_PREFIX = "ib_sim_save_slot_";
+const ACTIVE_SLOT_KEY = "ib_sim_active_slot";
 
 const STATE = {};
 
@@ -47,11 +50,15 @@ function generateDatingPool() {
   return pool;
 }
 
-function newGame(name) {
+// The canonical default shape for a brand-new character. Also used as a
+// merge base when loading saves, so any fields missing from an older save
+// (the schema has changed across versions) fall back to safe defaults
+// instead of leaving STATE with undefined properties that crash renders.
+function freshStateDefaults() {
   const minMonthly = calcMonthlyLoanPayment(DATA.STARTING_DEBT, DATA.LOAN_APR, DATA.LOAN_TERM_MONTHS);
-
-  Object.assign(STATE, {
-    name: name || "Alex Ward",
+  return {
+    name: "Alex Ward",
+    activeSlot: 1,
     uiMode: "desktop",
     ageYears: 22,
     ageMonths: 0,
@@ -93,6 +100,14 @@ function newGame(name) {
     gameOverReason: "",
     legendShown: false,
     mbaEligibleShown: false
+  };
+}
+
+function newGame(name, slot) {
+  Object.keys(STATE).forEach(k => delete STATE[k]);
+  Object.assign(STATE, freshStateDefaults(), {
+    name: name || "Alex Ward",
+    activeSlot: slot || 1
   });
 
   logEvent("You graduated with a finance degree, $450,000 in student debt, and a dream: become the best investment banker who ever lived.");
@@ -104,28 +119,92 @@ function logEvent(text) {
   if (STATE.log.length > 200) STATE.log.length = 200;
 }
 
-/* ---------------- Persistence ---------------- */
+/* ---------------- Persistence (5 save slots) ---------------- */
 
-function save() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(STATE)); } catch (e) { /* storage unavailable */ }
+function slotKey(slot) { return SAVE_KEY_PREFIX + slot; }
+
+function getActiveSlot() {
+  try {
+    const v = Number(localStorage.getItem(ACTIVE_SLOT_KEY));
+    return v >= 1 && v <= SAVE_SLOT_COUNT ? v : null;
+  } catch (e) { return null; }
 }
 
-function load() {
+function setActiveSlot(slot) {
+  STATE.activeSlot = slot;
+  try { localStorage.setItem(ACTIVE_SLOT_KEY, String(slot)); } catch (e) { /* ignore */ }
+}
+
+// One-time migration: bring an old single-save-file player into slot 1,
+// and make it the active slot so their game still resumes automatically.
+function migrateLegacySave() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const legacy = localStorage.getItem(LEGACY_SAVE_KEY);
+    if (!legacy) return;
+    if (!localStorage.getItem(slotKey(1))) {
+      localStorage.setItem(slotKey(1), legacy);
+    }
+    if (!localStorage.getItem(ACTIVE_SLOT_KEY)) {
+      localStorage.setItem(ACTIVE_SLOT_KEY, "1");
+    }
+    localStorage.removeItem(LEGACY_SAVE_KEY);
+  } catch (e) { /* ignore */ }
+}
+
+function save() {
+  const slot = STATE.activeSlot || getActiveSlot() || 1;
+  try { localStorage.setItem(slotKey(slot), JSON.stringify(STATE)); } catch (e) { /* storage unavailable */ }
+}
+
+function load(slot) {
+  try {
+    const raw = localStorage.getItem(slotKey(slot));
     if (!raw) return false;
     const parsed = JSON.parse(raw);
-    Object.assign(STATE, parsed);
+    Object.keys(STATE).forEach(k => delete STATE[k]);
+    // Merge onto fresh defaults first so fields missing from an older save
+    // (schema drift across versions) don't leave STATE with undefined spots.
+    Object.assign(STATE, freshStateDefaults(), parsed);
+    STATE.activeSlot = slot;
     return true;
   } catch (e) { return false; }
 }
 
-function hasSave() {
-  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+function hasSaveInSlot(slot) {
+  try { return !!localStorage.getItem(slotKey(slot)); } catch (e) { return false; }
 }
 
+function deleteSlot(slot) {
+  try { localStorage.removeItem(slotKey(slot)); } catch (e) { /* ignore */ }
+}
+
+// Wipes only the currently active slot (used by "start a new career" after game over).
 function wipeSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  const slot = STATE.activeSlot || getActiveSlot() || 1;
+  deleteSlot(slot);
+}
+
+function getSlotSummary(slot) {
+  try {
+    const raw = localStorage.getItem(slotKey(slot));
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    let status = "Unemployed";
+    if (s.education && s.education.inMBA) {
+      status = "MBA Student";
+    } else if (s.employment) {
+      const titles = s.employment.track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
+      const firm = DATA.FIRMS.find(f => f.id === s.employment.firmId);
+      status = `${titles[s.employment.titleIndex]}${firm ? " @ " + firm.name : ""}`;
+    }
+    const car = s.car && s.car.id !== "none" ? DATA.CARS.find(c => c.id === s.car.id) : null;
+    const carValue = car ? car.cashPrice * 0.55 : 0;
+    const netWorth = Math.round((s.cash || 0) + (s.savings || 0) + (s.investment || 0) + carValue - (s.debt || 0) - (s.car ? s.car.balance || 0 : 0));
+    return {
+      name: s.name, ageYears: s.ageYears, ageMonths: s.ageMonths,
+      status, netWorth, gameOver: !!s.gameOver
+    };
+  } catch (e) { return null; }
 }
 
 /* ---------------- Derived helpers ---------------- */

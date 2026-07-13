@@ -3,13 +3,16 @@
    ========================================================================== */
 
 (function boot() {
-  const loaded = load();
-  if (!loaded || !STATE.characterCreated) {
-    STATE.characterCreated = false;
-  }
-  UI.renderAll();
+  migrateLegacySave();
 
-  window.addEventListener("beforeunload", save);
+  const activeSlot = getActiveSlot();
+  if (activeSlot && hasSaveInSlot(activeSlot) && load(activeSlot)) {
+    UI.renderAll();
+  } else {
+    UI.showSlotPicker({ forced: true });
+  }
+
+  window.addEventListener("beforeunload", () => { if (STATE.activeSlot) save(); });
 
   // Expose a manual reset for convenience in dev tools.
   window.resetGame = function () { wipeSave(); location.reload(); };

@@ -56,6 +56,7 @@ UI.renderHeader = function () {
       <div class="hdr-name">${STATE.name}</div>
       <div class="hdr-age">Age ${ageString()} · Career Year ${year}, Month ${month}</div>
       <div class="hdr-status">${statusLine}</div>
+      <button class="layout-toggle save-toggle" onclick="UI.showSlotPicker({forced:false})" title="Switch save" aria-label="Switch save">💾</button>
       <button class="layout-toggle" onclick="UI.toggleUIMode()" title="Switch layout" aria-label="Switch layout">${STATE.uiMode === "mobile" ? "🖥️" : "📱"}</button>
     </div>
     <div class="hdr-row2">
@@ -472,6 +473,71 @@ UI.endMonth = function () {
   }
 };
 
+/* ---------------- Save slots ---------------- */
+
+UI.pendingSlot = null;
+
+UI.showSlotPicker = function (opts) {
+  opts = opts || {};
+  const forced = !!opts.forced;
+  const canCancel = !forced && STATE.characterCreated;
+  const cards = [];
+  for (let slot = 1; slot <= SAVE_SLOT_COUNT; slot++) {
+    const summary = getSlotSummary(slot);
+    const isActive = STATE.characterCreated && STATE.activeSlot === slot;
+    if (summary) {
+      cards.push(`
+        <div class="card save-slot ${isActive ? "current" : ""}">
+          <h4>Slot ${slot}${isActive ? " — Current" : ""}</h4>
+          <p>${summary.name} — Age ${summary.ageYears}y ${summary.ageMonths}m</p>
+          <p class="muted">${summary.status}${summary.gameOver ? " · Game Over" : ""}</p>
+          <p class="muted">Net worth: ${fmtMoney(summary.netWorth)}</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="UI.pickSlotContinue(${slot})">Continue</button>
+            <button class="btn btn-danger" onclick="UI.pickSlotDelete(${slot}, ${forced})">Delete</button>
+          </div>
+        </div>
+      `);
+    } else {
+      cards.push(`
+        <div class="card save-slot">
+          <h4>Slot ${slot}</h4>
+          <p class="muted">Empty</p>
+          <button class="btn btn-primary" onclick="UI.pickSlotNew(${slot})">New Game</button>
+        </div>
+      `);
+    }
+  }
+  openModalHTML(`
+    <div class="modal-box wide">
+      <h2>Choose a Save</h2>
+      <p class="muted">You have 5 save slots. Continue one, or start a new career in an empty slot.</p>
+      <div class="grid-2">${cards.join("")}</div>
+      ${canCancel ? '<button class="btn" id="slot-cancel">Cancel</button>' : ""}
+    </div>
+  `);
+  if (canCancel) el("slot-cancel").onclick = () => { clearModal(); };
+};
+
+UI.pickSlotContinue = function (slot) {
+  load(slot);
+  setActiveSlot(slot);
+  clearModal();
+  UI.renderAll();
+};
+
+UI.pickSlotDelete = function (slot, forced) {
+  if (!confirm("Delete this save? This can't be undone.")) return;
+  if (STATE.activeSlot === slot) STATE.characterCreated = false;
+  deleteSlot(slot);
+  UI.showSlotPicker({ forced: forced || !STATE.characterCreated });
+};
+
+UI.pickSlotNew = function (slot) {
+  UI.pendingSlot = slot;
+  UI.showCharacterCreation();
+};
+
 /* ---------------- Character creation ---------------- */
 
 UI.showCharacterCreation = function () {
@@ -501,10 +567,12 @@ UI.showCharacterCreation = function () {
 
   el("char-start").onclick = () => {
     const name = el("char-name").value.trim() || "Alex Ward";
-    STATE.characterCreated = true;
-    newGame(name);
+    const slot = UI.pendingSlot || STATE.activeSlot || 1;
+    newGame(name, slot);
+    setActiveSlot(slot);
     STATE.characterCreated = true;
     STATE.uiMode = chosenMode;
+    UI.pendingSlot = null;
     save();
     UI.renderAll();
   };

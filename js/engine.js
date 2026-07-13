@@ -333,7 +333,11 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
   // have far more applicants per seat, independent of how well you did.
   const competitiveness = firm.competitiveness != null ? firm.competitiveness : 0.3;
   const tierBaseChance = { strong: 0.92, pass: 0.72, borderline: 0.45 }[outcome];
-  const hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
+  let hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
+
+  // A near-perfect (100/100) interview is memorable enough to blow past
+  // ordinary competitiveness -- everyone wants the candidate who nailed it.
+  if (scorePct >= 0.97) hireChance = Math.max(hireChance, 0.95);
 
   if (Math.random() > hireChance) {
     logEvent(`${firm.name} liked what they saw, but the seat went to another candidate — roles at a ${firm.tier} shop are brutally competitive.`);

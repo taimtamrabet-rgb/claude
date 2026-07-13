@@ -231,12 +231,13 @@ html, body {
 
 .ui-mobile #app { max-width: 100%; padding: 10px 10px 92px; }
 
-.ui-mobile #header { position: relative; padding: 12px 46px 12px 14px; }
+.ui-mobile #header { position: relative; padding: 12px 88px 12px 14px; }
 .ui-mobile .hdr-row1 { flex-direction: column; align-items: flex-start; gap: 3px; margin-bottom: 6px; }
 .ui-mobile .hdr-name { font-size: 1.15rem; }
 .ui-mobile .hdr-age, .ui-mobile .hdr-status { font-size: 0.82rem; }
 .ui-mobile .hdr-status { margin-left: 0; }
 .ui-mobile .layout-toggle { position: absolute; top: 12px; right: 12px; }
+.ui-mobile .save-toggle { right: 54px; }
 .ui-mobile .hdr-row2 { gap: 6px; margin-bottom: 8px; }
 .ui-mobile .chip { padding: 5px 9px; font-size: 0.76rem; }
 .ui-mobile .hdr-bars { gap: 10px 16px; }

@@ -5,8 +5,10 @@
 const INTERVIEW = {};
 
 const IV_TIMER_SECONDS = 30;
-const IV_QUESTION_COUNT = 5;
+const IV_QUESTION_COUNT = 4;
 const DEFAULT_IV_WEIGHTS = { easy: 0.6, medium: 0.3, hard: 0.1 };
+const IV_QUIZ_WEIGHT = 0.6;
+const IV_MINIGAME_WEIGHT = 0.4;
 
 function pickInterviewQuestions(weights, count) {
   const byTier = { easy: [], medium: [], hard: [] };
@@ -43,7 +45,7 @@ INTERVIEW.start = function (firmId, track, onDone) {
   let idx = 0, correct = 0;
 
   function nextQuestion() {
-    if (idx >= questions.length) return finish();
+    if (idx >= questions.length) return startMinigamePhase();
     const q = questions[idx];
 
     // Shuffle option order (and track the new correct index) fresh each time,
@@ -90,8 +92,29 @@ INTERVIEW.start = function (firmId, track, onDone) {
     }, 200);
   }
 
-  function finish() {
-    const scorePct = correct / questions.length;
+  function startMinigamePhase() {
+    const quizScorePct = correct / questions.length;
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">One more thing</div>
+        <div class="minigame-sub">${firm.name} wants to see how you think on your feet, not just what you know. One quick exercise before they decide.</div>
+        <button class="btn btn-primary" id="iv-mg-continue">Continue</button>
+      </div>
+    `);
+    document.getElementById("iv-mg-continue").onclick = () => {
+      clearModal();
+      const variant = pickRandom(["crunch", "reflex", "triage", "sequence"]);
+      const title = `Interview at ${firm.name}`;
+      const onMgDone = (mgScore) => finish(quizScorePct, mgScore);
+      if (variant === "reflex") launchReflex(title, onMgDone);
+      else if (variant === "triage") launchInboxTriage(title, onMgDone);
+      else if (variant === "sequence") launchClientSequence(title, onMgDone);
+      else launchModelCrunch(title, onMgDone);
+    };
+  }
+
+  function finish(quizScorePct, mgScore) {
+    const scorePct = clamp(quizScorePct * IV_QUIZ_WEIGHT + mgScore * IV_MINIGAME_WEIGHT, 0, 1);
     const result = ENGINE.resolveInterview(firmId, track, scorePct);
     let headline, sub;
     if (result.hired) {

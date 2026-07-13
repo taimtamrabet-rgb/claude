@@ -239,12 +239,13 @@ html, body {
 
 .ui-mobile #app { max-width: 100%; padding: 10px 10px 92px; }
 
-.ui-mobile #header { position: relative; padding: 12px 46px 12px 14px; }
+.ui-mobile #header { position: relative; padding: 12px 88px 12px 14px; }
 .ui-mobile .hdr-row1 { flex-direction: column; align-items: flex-start; gap: 3px; margin-bottom: 6px; }
 .ui-mobile .hdr-name { font-size: 1.15rem; }
 .ui-mobile .hdr-age, .ui-mobile .hdr-status { font-size: 0.82rem; }
 .ui-mobile .hdr-status { margin-left: 0; }
 .ui-mobile .layout-toggle { position: absolute; top: 12px; right: 12px; }
+.ui-mobile .save-toggle { right: 54px; }
 .ui-mobile .hdr-row2 { gap: 6px; margin-bottom: 8px; }
 .ui-mobile .chip { padding: 5px 9px; font-size: 0.76rem; }
 .ui-mobile .hdr-bars { gap: 10px 16px; }
@@ -698,7 +699,10 @@ DATA.STARTING_CASH = 900;
    STATE.JS — game state shape, persistence, and pure helper calculations.
    ========================================================================== */
 
-const SAVE_KEY = "ib_sim_save_v1";
+const LEGACY_SAVE_KEY = "ib_sim_save_v1";
+const SAVE_SLOT_COUNT = 5;
+const SAVE_KEY_PREFIX = "ib_sim_save_slot_";
+const ACTIVE_SLOT_KEY = "ib_sim_active_slot";
 
 const STATE = {};
 
@@ -743,11 +747,15 @@ function generateDatingPool() {
   return pool;
 }
 
-function newGame(name) {
+// The canonical default shape for a brand-new character. Also used as a
+// merge base when loading saves, so any fields missing from an older save
+// (the schema has changed across versions) fall back to safe defaults
+// instead of leaving STATE with undefined properties that crash renders.
+function freshStateDefaults() {
   const minMonthly = calcMonthlyLoanPayment(DATA.STARTING_DEBT, DATA.LOAN_APR, DATA.LOAN_TERM_MONTHS);
-
-  Object.assign(STATE, {
-    name: name || "Alex Ward",
+  return {
+    name: "Alex Ward",
+    activeSlot: 1,
     uiMode: "desktop",
     ageYears: 22,
     ageMonths: 0,
@@ -789,6 +797,14 @@ function newGame(name) {
     gameOverReason: "",
     legendShown: false,
     mbaEligibleShown: false
+  };
+}
+
+function newGame(name, slot) {
+  Object.keys(STATE).forEach(k => delete STATE[k]);
+  Object.assign(STATE, freshStateDefaults(), {
+    name: name || "Alex Ward",
+    activeSlot: slot || 1
   });
 
   logEvent("You graduated with a finance degree, $450,000 in student debt, and a dream: become the best investment banker who ever lived.");
@@ -800,28 +816,92 @@ function logEvent(text) {
   if (STATE.log.length > 200) STATE.log.length = 200;
 }
 
-/* ---------------- Persistence ---------------- */
+/* ---------------- Persistence (5 save slots) ---------------- */
 
-function save() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(STATE)); } catch (e) { /* storage unavailable */ }
+function slotKey(slot) { return SAVE_KEY_PREFIX + slot; }
+
+function getActiveSlot() {
+  try {
+    const v = Number(localStorage.getItem(ACTIVE_SLOT_KEY));
+    return v >= 1 && v <= SAVE_SLOT_COUNT ? v : null;
+  } catch (e) { return null; }
 }
 
-function load() {
+function setActiveSlot(slot) {
+  STATE.activeSlot = slot;
+  try { localStorage.setItem(ACTIVE_SLOT_KEY, String(slot)); } catch (e) { /* ignore */ }
+}
+
+// One-time migration: bring an old single-save-file player into slot 1,
+// and make it the active slot so their game still resumes automatically.
+function migrateLegacySave() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const legacy = localStorage.getItem(LEGACY_SAVE_KEY);
+    if (!legacy) return;
+    if (!localStorage.getItem(slotKey(1))) {
+      localStorage.setItem(slotKey(1), legacy);
+    }
+    if (!localStorage.getItem(ACTIVE_SLOT_KEY)) {
+      localStorage.setItem(ACTIVE_SLOT_KEY, "1");
+    }
+    localStorage.removeItem(LEGACY_SAVE_KEY);
+  } catch (e) { /* ignore */ }
+}
+
+function save() {
+  const slot = STATE.activeSlot || getActiveSlot() || 1;
+  try { localStorage.setItem(slotKey(slot), JSON.stringify(STATE)); } catch (e) { /* storage unavailable */ }
+}
+
+function load(slot) {
+  try {
+    const raw = localStorage.getItem(slotKey(slot));
     if (!raw) return false;
     const parsed = JSON.parse(raw);
-    Object.assign(STATE, parsed);
+    Object.keys(STATE).forEach(k => delete STATE[k]);
+    // Merge onto fresh defaults first so fields missing from an older save
+    // (schema drift across versions) don't leave STATE with undefined spots.
+    Object.assign(STATE, freshStateDefaults(), parsed);
+    STATE.activeSlot = slot;
     return true;
   } catch (e) { return false; }
 }
 
-function hasSave() {
-  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+function hasSaveInSlot(slot) {
+  try { return !!localStorage.getItem(slotKey(slot)); } catch (e) { return false; }
 }
 
+function deleteSlot(slot) {
+  try { localStorage.removeItem(slotKey(slot)); } catch (e) { /* ignore */ }
+}
+
+// Wipes only the currently active slot (used by "start a new career" after game over).
 function wipeSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  const slot = STATE.activeSlot || getActiveSlot() || 1;
+  deleteSlot(slot);
+}
+
+function getSlotSummary(slot) {
+  try {
+    const raw = localStorage.getItem(slotKey(slot));
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    let status = "Unemployed";
+    if (s.education && s.education.inMBA) {
+      status = "MBA Student";
+    } else if (s.employment) {
+      const titles = s.employment.track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
+      const firm = DATA.FIRMS.find(f => f.id === s.employment.firmId);
+      status = `${titles[s.employment.titleIndex]}${firm ? " @ " + firm.name : ""}`;
+    }
+    const car = s.car && s.car.id !== "none" ? DATA.CARS.find(c => c.id === s.car.id) : null;
+    const carValue = car ? car.cashPrice * 0.55 : 0;
+    const netWorth = Math.round((s.cash || 0) + (s.savings || 0) + (s.investment || 0) + carValue - (s.debt || 0) - (s.car ? s.car.balance || 0 : 0));
+    return {
+      name: s.name, ageYears: s.ageYears, ageMonths: s.ageMonths,
+      status, netWorth, gameOver: !!s.gameOver
+    };
+  } catch (e) { return null; }
 }
 
 /* ---------------- Derived helpers ---------------- */
@@ -1210,7 +1290,11 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
   // have far more applicants per seat, independent of how well you did.
   const competitiveness = firm.competitiveness != null ? firm.competitiveness : 0.3;
   const tierBaseChance = { strong: 0.92, pass: 0.72, borderline: 0.45 }[outcome];
-  const hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
+  let hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
+
+  // A near-perfect (100/100) interview is memorable enough to blow past
+  // ordinary competitiveness -- everyone wants the candidate who nailed it.
+  if (scorePct >= 0.97) hireChance = Math.max(hireChance, 0.95);
 
   if (Math.random() > hireChance) {
     logEvent(`${firm.name} liked what they saw, but the seat went to another candidate — roles at a ${firm.tier} shop are brutally competitive.`);
@@ -1950,8 +2034,10 @@ function showMinigameResult(title, verdict, score, cont) {
 const INTERVIEW = {};
 
 const IV_TIMER_SECONDS = 30;
-const IV_QUESTION_COUNT = 5;
+const IV_QUESTION_COUNT = 4;
 const DEFAULT_IV_WEIGHTS = { easy: 0.6, medium: 0.3, hard: 0.1 };
+const IV_QUIZ_WEIGHT = 0.6;
+const IV_MINIGAME_WEIGHT = 0.4;
 
 function pickInterviewQuestions(weights, count) {
   const byTier = { easy: [], medium: [], hard: [] };
@@ -1988,7 +2074,7 @@ INTERVIEW.start = function (firmId, track, onDone) {
   let idx = 0, correct = 0;
 
   function nextQuestion() {
-    if (idx >= questions.length) return finish();
+    if (idx >= questions.length) return startMinigamePhase();
     const q = questions[idx];
 
     // Shuffle option order (and track the new correct index) fresh each time,
@@ -2035,8 +2121,29 @@ INTERVIEW.start = function (firmId, track, onDone) {
     }, 200);
   }
 
-  function finish() {
-    const scorePct = correct / questions.length;
+  function startMinigamePhase() {
+    const quizScorePct = correct / questions.length;
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">One more thing</div>
+        <div class="minigame-sub">${firm.name} wants to see how you think on your feet, not just what you know. One quick exercise before they decide.</div>
+        <button class="btn btn-primary" id="iv-mg-continue">Continue</button>
+      </div>
+    `);
+    document.getElementById("iv-mg-continue").onclick = () => {
+      clearModal();
+      const variant = pickRandom(["crunch", "reflex", "triage", "sequence"]);
+      const title = `Interview at ${firm.name}`;
+      const onMgDone = (mgScore) => finish(quizScorePct, mgScore);
+      if (variant === "reflex") launchReflex(title, onMgDone);
+      else if (variant === "triage") launchInboxTriage(title, onMgDone);
+      else if (variant === "sequence") launchClientSequence(title, onMgDone);
+      else launchModelCrunch(title, onMgDone);
+    };
+  }
+
+  function finish(quizScorePct, mgScore) {
+    const scorePct = clamp(quizScorePct * IV_QUIZ_WEIGHT + mgScore * IV_MINIGAME_WEIGHT, 0, 1);
     const result = ENGINE.resolveInterview(firmId, track, scorePct);
     let headline, sub;
     if (result.hired) {
@@ -2119,6 +2226,7 @@ UI.renderHeader = function () {
       <div class="hdr-name">${STATE.name}</div>
       <div class="hdr-age">Age ${ageString()} · Career Year ${year}, Month ${month}</div>
       <div class="hdr-status">${statusLine}</div>
+      <button class="layout-toggle save-toggle" onclick="UI.showSlotPicker({forced:false})" title="Switch save" aria-label="Switch save">💾</button>
       <button class="layout-toggle" onclick="UI.toggleUIMode()" title="Switch layout" aria-label="Switch layout">${STATE.uiMode === "mobile" ? "🖥️" : "📱"}</button>
     </div>
     <div class="hdr-row2">
@@ -2535,6 +2643,71 @@ UI.endMonth = function () {
   }
 };
 
+/* ---------------- Save slots ---------------- */
+
+UI.pendingSlot = null;
+
+UI.showSlotPicker = function (opts) {
+  opts = opts || {};
+  const forced = !!opts.forced;
+  const canCancel = !forced && STATE.characterCreated;
+  const cards = [];
+  for (let slot = 1; slot <= SAVE_SLOT_COUNT; slot++) {
+    const summary = getSlotSummary(slot);
+    const isActive = STATE.characterCreated && STATE.activeSlot === slot;
+    if (summary) {
+      cards.push(`
+        <div class="card save-slot ${isActive ? "current" : ""}">
+          <h4>Slot ${slot}${isActive ? " — Current" : ""}</h4>
+          <p>${summary.name} — Age ${summary.ageYears}y ${summary.ageMonths}m</p>
+          <p class="muted">${summary.status}${summary.gameOver ? " · Game Over" : ""}</p>
+          <p class="muted">Net worth: ${fmtMoney(summary.netWorth)}</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="UI.pickSlotContinue(${slot})">Continue</button>
+            <button class="btn btn-danger" onclick="UI.pickSlotDelete(${slot}, ${forced})">Delete</button>
+          </div>
+        </div>
+      `);
+    } else {
+      cards.push(`
+        <div class="card save-slot">
+          <h4>Slot ${slot}</h4>
+          <p class="muted">Empty</p>
+          <button class="btn btn-primary" onclick="UI.pickSlotNew(${slot})">New Game</button>
+        </div>
+      `);
+    }
+  }
+  openModalHTML(`
+    <div class="modal-box wide">
+      <h2>Choose a Save</h2>
+      <p class="muted">You have 5 save slots. Continue one, or start a new career in an empty slot.</p>
+      <div class="grid-2">${cards.join("")}</div>
+      ${canCancel ? '<button class="btn" id="slot-cancel">Cancel</button>' : ""}
+    </div>
+  `);
+  if (canCancel) el("slot-cancel").onclick = () => { clearModal(); };
+};
+
+UI.pickSlotContinue = function (slot) {
+  load(slot);
+  setActiveSlot(slot);
+  clearModal();
+  UI.renderAll();
+};
+
+UI.pickSlotDelete = function (slot, forced) {
+  if (!confirm("Delete this save? This can't be undone.")) return;
+  if (STATE.activeSlot === slot) STATE.characterCreated = false;
+  deleteSlot(slot);
+  UI.showSlotPicker({ forced: forced || !STATE.characterCreated });
+};
+
+UI.pickSlotNew = function (slot) {
+  UI.pendingSlot = slot;
+  UI.showCharacterCreation();
+};
+
 /* ---------------- Character creation ---------------- */
 
 UI.showCharacterCreation = function () {
@@ -2564,10 +2737,12 @@ UI.showCharacterCreation = function () {
 
   el("char-start").onclick = () => {
     const name = el("char-name").value.trim() || "Alex Ward";
-    STATE.characterCreated = true;
-    newGame(name);
+    const slot = UI.pendingSlot || STATE.activeSlot || 1;
+    newGame(name, slot);
+    setActiveSlot(slot);
     STATE.characterCreated = true;
     STATE.uiMode = chosenMode;
+    UI.pendingSlot = null;
     save();
     UI.renderAll();
   };
@@ -2621,13 +2796,16 @@ UI.showLegend = function () {
    ========================================================================== */
 
 (function boot() {
-  const loaded = load();
-  if (!loaded || !STATE.characterCreated) {
-    STATE.characterCreated = false;
-  }
-  UI.renderAll();
+  migrateLegacySave();
 
-  window.addEventListener("beforeunload", save);
+  const activeSlot = getActiveSlot();
+  if (activeSlot && hasSaveInSlot(activeSlot) && load(activeSlot)) {
+    UI.renderAll();
+  } else {
+    UI.showSlotPicker({ forced: true });
+  }
+
+  window.addEventListener("beforeunload", () => { if (STATE.activeSlot) save(); });
 
   // Expose a manual reset for convenience in dev tools.
   window.resetGame = function () { wipeSave(); location.reload(); };
