@@ -183,7 +183,7 @@ const DEGREE_QUALIFIES = {
 };
 
 const JOB_TRACKS = {
-  "Finance Analyst": [{ title: "Banking Analyst", salary: 100000 }, { title: "Banking Associate", salary: 175000 }, { title: "Investment Banker", salary: 220000 }, { title: "Managing Director", salary: 400000 }],
+  "Finance Analyst": [{ title: "Banking Analyst", salary: 100000 }, { title: "Investment Banker", salary: 220000 }, { title: "Managing Director", salary: 400000 }],
   "Accountant": [{ title: "Staff Accountant", salary: 55000 }, { title: "Accountant", salary: 70000 }, { title: "Senior Accountant", salary: 90000 }, { title: "Accounting Manager", salary: 115000 }],
   "Corporate Lawyer": [{ title: "Associate Attorney", salary: 95000 }, { title: "Corporate Lawyer", salary: 150000 }, { title: "Senior Partner", salary: 260000 }],
   "Software Engineer": [{ title: "Junior Software Engineer", salary: 75000 }, { title: "Software Engineer", salary: 105000 }, { title: "Senior Software Engineer", salary: 145000 }, { title: "Engineering Manager", salary: 180000 }],
@@ -208,8 +208,25 @@ const JOB_TRACKS = {
   "Construction Worker": [{ title: "Construction Laborer", salary: 32000 }, { title: "Skilled Tradesperson", salary: 48000 }, { title: "Site Foreman", salary: 62000 }],
   "Customer Service Rep": [{ title: "Customer Service Rep", salary: 29000 }, { title: "Team Lead", salary: 38000 }, { title: "Support Manager", salary: 50000 }],
   "Security Guard": [{ title: "Security Guard", salary: 28000 }, { title: "Senior Security Officer", salary: 36000 }, { title: "Security Supervisor", salary: 46000 }],
+  "Veterinarian": [{ title: "Associate Veterinarian", salary: 75000 }, { title: "Veterinarian", salary: 100000 }, { title: "Senior Veterinarian", salary: 135000 }],
+  "Dentist": [{ title: "Associate Dentist", salary: 90000 }, { title: "Dentist", salary: 160000 }, { title: "Practice Owner Dentist", salary: 220000 }],
+  "Pharmacist": [{ title: "Staff Pharmacist", salary: 95000 }, { title: "Pharmacist", salary: 120000 }, { title: "Pharmacy Manager", salary: 145000 }],
 };
 const NO_DEGREE_JOBS = ["Retail Associate", "Warehouse Worker", "Delivery Driver", "Construction Worker", "Customer Service Rep", "Security Guard"];
+
+const HIGHER_ED_PROGRAMS = {
+  medical: { label: "Medical School", years: 4, cost: 200000, qualifyingDegrees: ["Biology", "Health Sciences"], minYearsWorked: 0, unlocksJob: "Physician" },
+  law: { label: "Law School", years: 3, cost: 150000, qualifyingDegrees: ["Law", "Political Science", "History", "Philosophy", "Communications", "Economics"], minYearsWorked: 0, unlocksJob: "Corporate Lawyer" },
+  grad: { label: "Grad School (Master's/PhD)", years: 2, cost: 60000, qualifyingDegrees: null, minYearsWorked: 0, unlocksJob: null },
+  mba: { label: "Business School (MBA)", years: 2, cost: 120000, qualifyingDegrees: null, minYearsWorked: 2, unlocksJob: null },
+  vet: { label: "Veterinary School", years: 4, cost: 180000, qualifyingDegrees: ["Biology", "Health Sciences", "Environmental Science", "Agriculture"], minYearsWorked: 0, unlocksJob: "Veterinarian" },
+  dental: { label: "Dental School", years: 4, cost: 190000, qualifyingDegrees: ["Biology", "Health Sciences"], minYearsWorked: 0, unlocksJob: "Dentist" },
+  pharmacy: { label: "Pharmacy School", years: 4, cost: 160000, qualifyingDegrees: ["Biology", "Health Sciences", "Science"], minYearsWorked: 0, unlocksJob: "Pharmacist" },
+};
+const HIGHER_ED_REQUIRED_JOBS = {
+  "Physician": "medical", "Corporate Lawyer": "law", "Psychologist": "grad", "Research Scientist": "grad",
+  "Veterinarian": "vet", "Dentist": "dental", "Pharmacist": "pharmacy",
+};
 
 const PRO_TRACKS = {
   "Basketball": [{ title: "Pro Basketball Rookie", salary: 1000000 }, { title: "Pro Basketball Starter", salary: 4000000 }, { title: "Pro Basketball All-Star", salary: 12000000 }, { title: "Pro Basketball Superstar", salary: 35000000 }],
@@ -666,9 +683,15 @@ const EVENTS = [
   ]),
 ];
 
+function jobRequiresHigherEd(job, ctx) {
+  const required = HIGHER_ED_REQUIRED_JOBS[job];
+  return required && ctx.higherEd !== required;
+}
 function buildJobMarket(ctx) {
   const eligible = ctx.degree && DEGREE_QUALIFIES[ctx.degree] ? DEGREE_QUALIFIES[ctx.degree] : null;
-  const pool = eligible || NO_DEGREE_JOBS;
+  let pool = eligible || NO_DEGREE_JOBS;
+  pool = pool.filter((j) => !jobRequiresHigherEd(j, ctx));
+  if (!pool.length) pool = NO_DEGREE_JOBS;
   const postings = [];
   const cycle = (arr) => { const out = []; while (out.length < 20) out.push(...[...arr].sort(() => Math.random() - 0.5)); return out; };
   const primary = cycle(pool);
@@ -726,6 +749,7 @@ function newCtx(char) {
     studyUsesThisYear: 0, trainUsesThisYear: 0, partTimeUsesThisYear: 0,
     tournamentUsesThisYear: 0, marchMadnessUsesThisYear: 0, workHardUsesThisYear: 0, schoolTransferUsesThisYear: 0,
     proSport: null, proTeam: null, proPosition: null, proSeasonNumber: 0, collegeFootballYears: 0, gradNotified: false,
+    premed: false, higherEd: null, higherEdInProgress: null, higherEdGradAge: null, yearsWorked: 0,
     pilot: { licenseLevel: 0, hours: 0, lessonsThisYear: 0 },
     carLicense: false, pilotStudentLicense: false,
     pets: [], cars: [], realEstate: null,
@@ -855,6 +879,49 @@ function chooseFunding(type) {
   else if (type === "sports") c.log("Awarded an athletic scholarship covering tuition.");
   else if (type === "loan") { c.wealth -= loanAmount; c.log(`Took out a $${loanAmount.toLocaleString()} student loan to pay for college.`); }
   activeFlow = null;
+  render();
+}
+
+/* ---- higher education (grad/professional school) ---- */
+function higherEdEligible(c, key) {
+  const p = HIGHER_ED_PROGRAMS[key];
+  if (!c.uniGraduated || c.higherEdInProgress || c.higherEd === key) return false;
+  if (p.qualifyingDegrees && !p.qualifyingDegrees.includes(c.degree)) return false;
+  if ((c.yearsWorked || 0) < p.minYearsWorked) return false;
+  if (key === "medical" && !c.premed && c.gradeRaw < 70) return false;
+  return true;
+}
+function higherEdLockedReason(c, key) {
+  const p = HIGHER_ED_PROGRAMS[key];
+  if (!c.uniGraduated) return "Requires an undergraduate degree";
+  if (c.higherEd === key) return "Already completed";
+  if (c.higherEdInProgress) return "Already enrolled elsewhere";
+  if (p.qualifyingDegrees && !p.qualifyingDegrees.includes(c.degree)) return `Requires a qualifying degree (${p.qualifyingDegrees.join(", ")})`;
+  if ((c.yearsWorked || 0) < p.minYearsWorked) return `Requires ${p.minYearsWorked}+ years of work experience`;
+  if (key === "medical" && !c.premed && c.gradeRaw < 70) return "Requires the Pre-Med track or stronger grades";
+  return "";
+}
+function openHigherEdFlow() {
+  if (ctx.higherEdInProgress) return;
+  activeFlow = { type: "highered" };
+  render();
+}
+function applyHigherEd(key) {
+  const c = ctx;
+  if (!higherEdEligible(c, key)) return;
+  const p = HIGHER_ED_PROGRAMS[key];
+  c.wealth -= p.cost;
+  c.higherEdInProgress = key;
+  c.higherEdGradAge = age + p.years;
+  c.log(`Enrolled in ${p.label} — ${formatMoney(p.cost, character.country)} tuition, ${p.years} years.`);
+  activeFlow = null;
+  render();
+}
+function declarePremed() {
+  const c = ctx;
+  if (c.path !== "college" || !["Biology", "Health Sciences"].includes(c.degree) || c.premed) return;
+  c.premed = true;
+  c.log("Declared the Pre-Med track — a demanding but direct path toward medical school.");
   render();
 }
 
@@ -1295,6 +1362,7 @@ function doYearAdvance() {
     c.realEstate.remainingMonths = Math.max(0, c.realEstate.remainingMonths - 12);
   }
   if (c.path === "college" && c.madeTeam === "American Football" && !c.job) c.collegeFootballYears = Math.min(4, c.collegeFootballYears + 1);
+  if (c.job) c.yearsWorked = (c.yearsWorked || 0) + 1;
 
   if (c.madeTeam && c.trainUsesThisYear === 0 && c.tournamentUsesThisYear === 0) c.sportPerformance = clamp100(c.sportPerformance - 3);
   if (c.job && c.workHardUsesThisYear === 0) c.jobPerformance = clamp100(c.jobPerformance - 3);
@@ -1313,6 +1381,13 @@ function doYearAdvance() {
   }
   age = nextAge;
   updateRankings();
+
+  if (c.higherEdInProgress && age >= c.higherEdGradAge) {
+    const p = HIGHER_ED_PROGRAMS[c.higherEdInProgress];
+    c.higherEd = c.higherEdInProgress;
+    c.higherEdInProgress = null;
+    c.log(`Completed ${p.label}!`);
+  }
 
   if (c.job && c.proSport && !c.retired) {
     c.proSeasonNumber = (c.proSeasonNumber || 0) + 1;
@@ -1530,6 +1605,14 @@ function pageOccupation() {
       html += rowBtnHTML("🏫", "Transfer School", `Currently: ${SCHOOL_TYPES[c.schoolType].label}${c.schoolTransferUsesThisYear >= 1 ? " · used for this year" : ""}`, "openSchoolTransfer", null, c.schoolTransferUsesThisYear >= 1);
     }
 
+    if (c.path === "college") {
+      if (["Biology", "Health Sciences"].includes(c.degree)) {
+        html += c.premed
+          ? rowHTML("🩺", "Pre-Med Track", "Declared — on track for medical school")
+          : rowBtnHTML("🩺", "Declare Pre-Med Track", "Unlocks an easier path into Medical School", "declarePremed");
+      }
+    }
+
     if (a < 11) {
       html += rowHTML("🏀", "Sports Clubs", "Open starting in middle school (age 11)");
     } else if (a < 18) {
@@ -1580,6 +1663,13 @@ function pageOccupation() {
     html += `<div class="section-label">Job Performance</div>` + perfBarHTML("Performance", c.jobPerformance);
     html += rowBtnHTML("📈", "Work Harder", c.workHardUsesThisYear >= 1 ? "Used for this year" : "Once a year", "workHarder", null, c.workHardUsesThisYear >= 1);
     html += rowBtnHTML("🚪", "Quit Job", "Leave your current job", "quitJob");
+  }
+
+  if (c.uniGraduated) {
+    html += `<div class="section-label">Higher Education</div>`;
+    if (c.higherEd) html += rowHTML("🎓", HIGHER_ED_PROGRAMS[c.higherEd].label, "Completed");
+    if (c.higherEdInProgress) html += rowHTML("🎓", HIGHER_ED_PROGRAMS[c.higherEdInProgress].label, `In progress — graduates age ${c.higherEdGradAge}`);
+    if (!c.higherEdInProgress) html += rowBtnHTML("🎓", "Apply to Higher Education", "Medical, Law, Grad, MBA, Vet, Dental, Pharmacy", "openHigherEd");
   }
   return html;
 }
@@ -1813,6 +1903,14 @@ function renderFlowOverlay() {
       : `<div class="net-line"><span>Award</span><span>None this season</span></div>`;
     body += `<button class="btn-primary" style="margin-top:14px;" data-action="continueAfterSeasonRecap">Continue</button>`;
     html = overlayShell(null, body);
+  } else if (f.type === "highered") {
+    const rows = Object.keys(HIGHER_ED_PROGRAMS).map((key) => {
+      const p = HIGHER_ED_PROGRAMS[key];
+      const eligible = higherEdEligible(c, key);
+      const reason = eligible ? `${formatMoney(p.cost, character.country)} · ${p.years} years` : `🔒 ${higherEdLockedReason(c, key)}`;
+      return rowBtnHTML("🎓", p.label, reason, "applyHigherEd", key, !eligible);
+    }).join("");
+    html = overlayShell("Higher Education", `<p class="overlay-text">Which program will ${esc(c.first)} apply to?</p>${rows}`, "closeFlow");
   } else if (f.type === "graduation") {
     html = overlayShell(null, `<p class="overlay-text" style="text-align:center;font-weight:700;color:var(--stamp);">🎓 Congratulations!</p><p class="overlay-text" style="text-align:center;">${esc(c.first)} graduated from college${c.degree ? ` with a degree in ${esc(c.degree)}` : ""}!</p><button class="btn-primary" data-action="continueAfterGraduation">Continue</button>`);
   } else if (f.type === "dating") {
@@ -1962,6 +2060,9 @@ const ACTIONS = {
   goOnDate: (arg) => goOnDate(arg === "1"),
 
   continueAfterGraduation: () => continueAfterGraduation(),
+  openHigherEd: () => openHigherEdFlow(),
+  applyHigherEd: (arg) => applyHigherEd(arg),
+  declarePremed: () => declarePremed(),
   continueAfterSeasonRecap: () => continueAfterSeasonRecap(),
   restart: () => {
     screen = "create"; character = null; ctx = null; age = 0; activeFlow = null; endResult = null;
