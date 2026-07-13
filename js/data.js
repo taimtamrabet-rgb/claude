@@ -114,78 +114,6 @@ DATA.CARS = [
 /* ---------------- Interview question bank ---------------- */
 
 DATA.INTERVIEW_QUESTIONS = [
-  { q: "Walk me through a DCF.", options: [
-      "Project free cash flows, discount them back at the WACC, and add a terminal value.",
-      "Compare the company's P/E ratio to its peers.",
-      "Look at the last 3 acquisitions in the sector and average the multiples.",
-      "Divide net income by shares outstanding."
-    ], correct: 0, category: "technical", tier: "medium" },
-  { q: "What's the difference between Enterprise Value and Equity Value?", options: [
-      "They are always the same number.",
-      "EV = Equity Value + Debt + Preferred + Minority Interest − Cash. It represents the value of core operations to all capital providers.",
-      "Equity Value includes debt, EV does not.",
-      "EV is only used for private companies."
-    ], correct: 1, category: "technical", tier: "medium" },
-  { q: "Why would you use multiple valuation methodologies?", options: [
-      "You wouldn't, one method is always correct.",
-      "Because each method has different assumptions/blind spots, and triangulating gives a more defensible range of value.",
-      "Because clients demand exactly three slides.",
-      "To make the pitch book longer."
-    ], correct: 1, category: "technical", tier: "medium" },
-  { q: "What happens to Enterprise Value if a company issues debt to buy back stock?", options: [
-      "EV increases because debt goes up and cash may fall, while equity value falls.",
-      "EV stays exactly the same, always.",
-      "EV decreases because shares outstanding fall.",
-      "There is no effect on any valuation metric."
-    ], correct: 0, category: "technical", tier: "hard" },
-  { q: "How do you calculate WACC?", options: [
-      "Just use the risk-free rate.",
-      "Weighted average of cost of equity (via CAPM) and after-tax cost of debt, weighted by market value of equity and debt.",
-      "Average the company's last 5 years of stock returns.",
-      "Net income divided by total assets."
-    ], correct: 1, category: "technical", tier: "hard" },
-  { q: "What is a Leveraged Buyout (LBO)?", options: [
-      "Buying a company using mostly your own cash.",
-      "Acquiring a company using a significant amount of debt, with the target's own cash flows used to pay down that debt.",
-      "A merger of two equally-sized companies.",
-      "Selling a division of a company to the public via IPO."
-    ], correct: 1, category: "technical", tier: "medium" },
-  { q: "In an LBO model, what mainly drives investor returns?", options: [
-      "EBITDA growth, multiple expansion, and debt paydown.",
-      "The color of the pitch book cover.",
-      "The number of slides in the CIM.",
-      "The target's marketing budget alone."
-    ], correct: 0, category: "technical", tier: "medium" },
-  { q: "What's the difference between accretion and dilution in M&A?", options: [
-      "Accretive means the deal increases acquirer EPS; dilutive means it decreases acquirer EPS.",
-      "Accretive means the target's revenue grows.",
-      "Dilution refers to diluting the target's cash balance.",
-      "They both mean the same thing: value creation."
-    ], correct: 0, category: "technical", tier: "medium" },
-  { q: "Why might a company prefer to raise debt instead of equity?", options: [
-      "Debt is always cheaper and safer no matter what.",
-      "Interest is tax-deductible and it avoids diluting existing shareholders, though it adds fixed obligations and risk.",
-      "Equity holders always prefer more debt.",
-      "Debt never has to be repaid."
-    ], correct: 1, category: "technical", tier: "medium" },
-  { q: "What is EBITDA a proxy for?", options: [
-      "Net income after taxes.",
-      "A rough proxy for operating cash flow, stripping out financing, tax, and non-cash effects.",
-      "Total enterprise value.",
-      "The company's stock price."
-    ], correct: 1, category: "technical", tier: "medium" },
-  { q: "Two companies have the same P/E ratio. Are they equally valued?", options: [
-      "Yes, P/E is a perfect measure of value on its own.",
-      "Not necessarily — capital structure, growth, and accounting differences can make P/E misleading without context.",
-      "No company can ever have the same P/E as another.",
-      "P/E ignores earnings entirely so it doesn't matter."
-    ], correct: 1, category: "technical", tier: "medium" },
-  { q: "What does a negative working capital change mean for cash flow in a DCF?", options: [
-      "It is always ignored.",
-      "An increase in working capital is a cash outflow (uses cash); a decrease is a cash inflow.",
-      "Working capital never affects free cash flow.",
-      "It always means the company is bankrupt."
-    ], correct: 1, category: "technical", tier: "hard" },
   { q: "Why do investment banking?", options: [
       "For the free coffee.",
       "I want the steepest learning curve in finance — deal exposure, technical rigor, and mentorship from the best in the industry.",
@@ -222,30 +150,6 @@ DATA.INTERVIEW_QUESTIONS = [
       "I just want a change of scenery, no real reason.",
       "Banking was too easy for me."
     ], correct: 1, category: "behavioral", tier: "easy" },
-  { q: "A client's EBITDA add-backs look aggressive. What do you do?", options: [
-      "Include them without question since the client asked.",
-      "Flag it to your VP, sanity-check each add-back against normal practice, and push back on anything unsupported.",
-      "Delete the entire model.",
-      "Tell the client their business is worthless."
-    ], correct: 1, category: "technical", tier: "hard" },
-  { q: "What is the 'terminal value' in a DCF and why does it usually dominate the valuation?", options: [
-      "It's a rounding error that can be ignored.",
-      "It captures the value of all cash flows beyond the explicit forecast period, and often represents 60-80% of total value since it's a perpetuity.",
-      "It's the value of the company's terminal (final) year of existence before shutting down.",
-      "It only matters for companies going bankrupt."
-    ], correct: 1, category: "technical", tier: "hard" },
-  { q: "What's a reasonable way to estimate a private company's cost of equity?", options: [
-      "Just guess 10% for every company.",
-      "Use CAPM with a beta from comparable public companies (unlevered and re-levered for the target's capital structure).",
-      "Use the company's own historical stock returns (it has none).",
-      "Cost of equity does not apply to private companies."
-    ], correct: 1, category: "technical", tier: "hard" },
-  { q: "How would you value a company with negative earnings?", options: [
-      "It's impossible to value such a company.",
-      "Lean on revenue multiples, EV/EBITDA if positive, DCF, or sector-specific metrics (e.g., users, ARR) instead of P/E.",
-      "Assume its value is zero.",
-      "Use only the book value of its equipment."
-    ], correct: 1, category: "technical", tier: "hard" },
   { q: "Describe your ideal team culture.", options: [
       "Everyone works alone and never talks to each other.",
       "High ownership, direct feedback, and people who cover for each other when the workload spikes.",
@@ -317,7 +221,103 @@ DATA.INTERVIEW_QUESTIONS = [
       "Stay calm, listen, and focus on actually solving their problem.",
       "Match their tone and argue back.",
       "Transfer them to someone else without explanation."
-    ], correct: 1, category: "behavioral", tier: "easy" }
+    ], correct: 1, category: "behavioral", tier: "easy" },
+  { q: "What does it mean to \'diversify\' your investments?", options: [
+      "Put all your money in one stock you really believe in.",
+      "Spread your money across different assets so one bad investment doesn't wipe you out.",
+      "Only invest in companies whose name you like.",
+      "Keep all your money in cash under your mattress."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Why do people keep an emergency fund?", options: [
+      "Because banks require it by law.",
+      "So an unexpected expense doesn't force them into high-interest debt.",
+      "To impress their accountant.",
+      "It earns a higher return than any investment."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What is compound interest?", options: [
+      "A one-time fee your bank charges you.",
+      "Interest calculated on both the original amount and the interest it's already earned.",
+      "Interest that only applies to loans, never savings.",
+      "A tax on interest income."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What's a credit score mainly used for?", options: [
+      "It determines your salary.",
+      "It signals to lenders how likely you are to repay borrowed money.",
+      "It's just your bank account balance.",
+      "It sets how much cash you can carry."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What does APR stand for on a loan or credit card?", options: [
+      "Automatic Payment Requirement.",
+      "Annual Percentage Rate — the yearly cost of borrowing, including interest.",
+      "Average Purchase Rate.",
+      "Approved Payment Record."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What's the main difference between a stock and a bond?", options: [
+      "They're two names for the same thing.",
+      "A stock is ownership in a company; a bond is a loan you make to a company or government.",
+      "Bonds are always riskier than stocks.",
+      "Stocks always pay a fixed interest rate."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Why might someone use a monthly budget?", options: [
+      "It's only useful for people already in debt.",
+      "To track income and expenses so spending doesn't outpace earning.",
+      "To avoid ever spending money on anything.",
+      "Budgets are just for businesses, not individuals."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What does it mean when a stock market index goes up?", options: [
+      "Every single stock in the world went up.",
+      "The overall value of the group of stocks it tracks increased, on average.",
+      "Interest rates went up.",
+      "The government printed more money."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "What's a 401(k)?", options: [
+      "A type of checking account.",
+      "A retirement savings account, often offered through an employer, with tax advantages.",
+      "A government tax form.",
+      "A credit card rewards program."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Why do lenders care about your debt-to-income ratio?", options: [
+      "It tells them your favorite bank.",
+      "It shows how much of your income is already committed to debt payments, signaling repayment risk.",
+      "It's used to calculate your card's PIN.",
+      "It has no real use, it's just paperwork."
+    ], correct: 1, category: "finance", tier: "medium" },
+  { q: "Inflation is running at 5% and your savings account pays 1% interest. What's happening to your money's purchasing power?", options: [
+      "It's growing by 6%.",
+      "It's shrinking — you're losing purchasing power in real terms even as the balance grows.",
+      "Nothing changes, interest and inflation cancel out exactly.",
+      "Purchasing power only depends on your salary."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "What's the general idea behind the 'debt avalanche' payoff method?", options: [
+      "Pay off your smallest debt first no matter the interest rate.",
+      "Pay minimums on everything, then throw extra money at the debt with the highest interest rate first.",
+      "Only pay debts on your birthday.",
+      "Ignore small debts and only pay large ones."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "Why is a Roth IRA often attractive compared to a regular taxable savings account?", options: [
+      "It has no rules or restrictions at all.",
+      "You contribute after-tax money, but qualified withdrawals in retirement are tax-free.",
+      "It guarantees a fixed 10% annual return.",
+      "It's the same as a checking account, just renamed."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "Why do financial advisors often recommend low-cost index funds over picking individual stocks?", options: [
+      "Index funds are guaranteed to never lose money.",
+      "Broad diversification and low fees tend to beat most people's attempts at picking individual winners over time.",
+      "Picking individual stocks is illegal for beginners.",
+      "Index funds pay you a fixed salary."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "What does it mean for a loan to be 'amortizing'?", options: [
+      "The interest rate doubles every year.",
+      "Each payment covers some interest and some principal, so the balance gradually shrinks to zero over the term.",
+      "You only pay interest until the very last payment, then the whole balance at once.",
+      "The lender forgives the loan automatically after 5 years."
+    ], correct: 1, category: "finance", tier: "hard" },
+  { q: "Two people earn the same salary. One starts saving 20% at age 25, the other at age 35. Why does the early saver likely end up with much more by retirement?", options: [
+      "The government gives bonus money to early savers.",
+      "Extra years of compounding growth make an outsized difference, even at the same savings rate.",
+      "There's no real difference, timing doesn't matter.",
+      "The later saver's money automatically grows faster to compensate."
+    ], correct: 1, category: "finance", tier: "hard" },
 ];
 
 /* ---------------- Networking events ---------------- */

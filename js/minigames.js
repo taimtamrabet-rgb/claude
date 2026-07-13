@@ -252,11 +252,174 @@ function launchReflex(title, onDone) {
   nextRound();
 }
 
+/* ---------------- Inbox Triage minigame ---------------- */
+
+const TRIAGE_SCENARIOS = [
+  { text: "Your MD needs the updated numbers within the hour.", correct: "reply" },
+  { text: "A vendor sends a mass email advertising new office chairs.", correct: "ignore" },
+  { text: "A first-year analyst has a basic question that's already answered on the team wiki.", correct: "delegate" },
+  { text: "A client asks for a quick confirmation on tomorrow's meeting time.", correct: "reply" },
+  { text: "You're cc'd on a thread that another team already resolved yesterday.", correct: "ignore" },
+  { text: "Your VP wants your read on a deal point before end of day.", correct: "reply" },
+  { text: "IT sends a routine password-expiration notice.", correct: "ignore" },
+  { text: "A summer intern needs hands-on help with something that's really the associate's job to teach.", correct: "delegate" },
+  { text: "A reporter cold-emails asking for comment on a deal rumor.", correct: "delegate" },
+  { text: "A scheduling conflict comes up for a call you're not essential to.", correct: "delegate" },
+  { text: "Someone accidentally added you to a thread meant for a totally different team.", correct: "ignore" },
+  { text: "Your team lead asks you to confirm you'll have the model ready by 9am tomorrow.", correct: "reply" }
+];
+const TRIAGE_ACTIONS = [
+  { key: "reply", label: "Reply Now" },
+  { key: "delegate", label: "Delegate" },
+  { key: "ignore", label: "Ignore" }
+];
+const TRIAGE_TIMER_SECONDS = 12;
+
+function launchInboxTriage(title, onDone) {
+  const ROUNDS = 5;
+  const pool = TRIAGE_SCENARIOS.slice();
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const rounds = pool.slice(0, ROUNDS);
+  let idx = 0, correct = 0, timer = null;
+  const startEnergy = STATE.energy;
+
+  function nextRound() {
+    if (idx >= rounds.length) return finish();
+    const scenario = rounds[idx];
+    const actions = TRIAGE_ACTIONS.slice();
+    for (let i = actions.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [actions[i], actions[j]] = [actions[j], actions[i]];
+    }
+    let timeLeft = TRIAGE_TIMER_SECONDS;
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${title} <span class="minigame-progress">Item ${idx + 1}/${rounds.length}</span></div>
+        <div class="minigame-timerbar"><div class="minigame-timerfill" id="mg-timer" style="width:100%"></div></div>
+        <div class="minigame-sub">Your inbox just got this. What do you do with it?</div>
+        <div class="minigame-question">${scenario.text}</div>
+        <div class="minigame-options" id="mg-options"></div>
+      </div>
+    `);
+    const optsEl = document.getElementById("mg-options");
+    actions.forEach(a => {
+      const btn = document.createElement("button");
+      btn.className = "btn option-btn";
+      btn.textContent = a.label;
+      btn.onclick = () => answer(a.key === scenario.correct);
+      optsEl.appendChild(btn);
+    });
+
+    function answer(isCorrect) {
+      clearInterval(timer);
+      if (isCorrect) correct++;
+      idx++;
+      setTimeout(nextRound, 250);
+    }
+
+    timer = setInterval(() => {
+      timeLeft -= 0.2;
+      const fill = document.getElementById("mg-timer");
+      if (fill) fill.style.width = clamp(timeLeft / TRIAGE_TIMER_SECONDS * 100, 0, 100) + "%";
+      if (timeLeft <= 0) answer(false);
+    }, 200);
+  }
+
+  function finish() {
+    clearModal();
+    const raw = correct / rounds.length;
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
+    onDone(score, raw, correct, rounds.length);
+  }
+
+  nextRound();
+}
+
+/* ---------------- Client Call Sequence minigame (Simon-style memory) ---------------- */
+
+const SEQUENCE_CLIENTS = ["Client A", "Client B", "Client C", "Client D"];
+
+function launchClientSequence(title, onDone) {
+  const MAX_ROUNDS = 5;
+  const sequence = [];
+  let roundsCompleted = 0;
+  const startEnergy = STATE.energy;
+
+  function renderBoard(activeIndex, disabled) {
+    openModalHTML(`
+      <div class="modal-box minigame-box">
+        <div class="minigame-header">${title} <span class="minigame-progress">Round ${roundsCompleted + 1}/${MAX_ROUNDS}</span></div>
+        <div class="minigame-sub">Watch the order the clients light up, then repeat it back by clicking them in the same order.</div>
+        <div class="simon-grid" id="simon-grid">
+          ${SEQUENCE_CLIENTS.map((name, i) => `<button class="simon-box${activeIndex === i ? " active" : ""}" data-i="${i}" ${disabled ? "disabled" : ""}>${name}</button>`).join("")}
+        </div>
+      </div>
+    `);
+  }
+
+  function playback() {
+    renderBoard(-1, true);
+    let i = 0;
+    const step = () => {
+      if (i >= sequence.length) { setTimeout(startInput, 300); return; }
+      renderBoard(sequence[i], true);
+      setTimeout(() => {
+        renderBoard(-1, true);
+        setTimeout(() => { i++; step(); }, 200);
+      }, 550);
+    };
+    setTimeout(step, 400);
+  }
+
+  function startInput() {
+    renderBoard(-1, false);
+    let inputIdx = 0;
+    const grid = document.getElementById("simon-grid");
+    grid.querySelectorAll(".simon-box").forEach(btn => {
+      btn.onclick = () => {
+        const i = Number(btn.dataset.i);
+        if (i === sequence[inputIdx]) {
+          btn.classList.add("active");
+          setTimeout(() => btn.classList.remove("active"), 200);
+          inputIdx++;
+          if (inputIdx === sequence.length) {
+            roundsCompleted++;
+            if (roundsCompleted >= MAX_ROUNDS) { finish(); return; }
+            sequence.push(randInt(0, 3));
+            setTimeout(playback, 500);
+          }
+        } else {
+          finish();
+        }
+      };
+    });
+  }
+
+  function finish() {
+    clearModal();
+    const raw = roundsCompleted / MAX_ROUNDS;
+    const energyFactor = clamp(0.7 + (startEnergy / STATE.maxEnergy) * 0.5, 0.7, 1.15);
+    const disciplineNudge = (STATE.skills.discipline - 50) / 300;
+    const score = clamp(raw * energyFactor + disciplineNudge + 0.08, 0, 1);
+    spendEnergy(20);
+    onDone(score, raw);
+  }
+
+  sequence.push(randInt(0, 3), randInt(0, 3), randInt(0, 3));
+  playback();
+}
+
 /* ---------------- Public entry point ---------------- */
 
 MINIGAMES.launch = function (kind, onComplete) {
   const title = kind === "study" ? "Study Session" : (currentFirm() ? currentFirm().name + " — This Month's Grind" : "This Month's Grind");
-  const useReflex = Math.random() < 0.5;
+  const variant = pickRandom(["crunch", "reflex", "triage", "sequence"]);
   const wrapUp = (score, raw, correct, total) => {
     let verdict;
     if (score >= 0.75) verdict = "Excellent work this month.";
@@ -265,7 +428,9 @@ MINIGAMES.launch = function (kind, onComplete) {
     else verdict = "A brutal month. Your work was sloppy.";
     showMinigameResult(title, verdict, score, () => onComplete(score));
   };
-  if (useReflex) launchReflex(title, wrapUp);
+  if (variant === "reflex") launchReflex(title, wrapUp);
+  else if (variant === "triage") launchInboxTriage(title, wrapUp);
+  else if (variant === "sequence") launchClientSequence(title, wrapUp);
   else launchModelCrunch(title, wrapUp);
 };
 

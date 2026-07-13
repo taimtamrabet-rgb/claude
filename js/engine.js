@@ -394,6 +394,9 @@ function checkPromotion() {
   }
 }
 
+const OUTPERFORMANCE_THRESHOLD = 0.6; // performance score above 60/100
+const OUTPERFORMANCE_BONUS_RATE = 0.12; // extra % of base salary
+
 function payYearEndBonus() {
   const e = STATE.employment;
   const track = e.track;
@@ -406,6 +409,14 @@ function payYearEndBonus() {
   const netBonus = Math.round(grossBonus * (1 - effectiveTaxRate(currentBaseSalary() + grossBonus)));
   STATE.cash += netBonus;
   logEvent(`Year-end bonus at ${currentFirm().name}: ${fmtMoney(netBonus)} after tax (gross ${fmtMoney(grossBonus)}, performance ${(avg * 100).toFixed(0)}/100).`);
+
+  if (avg > OUTPERFORMANCE_THRESHOLD) {
+    const grossKicker = Math.round(currentBaseSalary() * OUTPERFORMANCE_BONUS_RATE);
+    const netKicker = Math.round(grossKicker * (1 - effectiveTaxRate(currentBaseSalary() + grossBonus + grossKicker)));
+    STATE.cash += netKicker;
+    addReputation(3);
+    logEvent(`Outperformance bonus: your ${(avg * 100).toFixed(0)}/100 average this year topped the firm's 60/100 bar, earning an extra ${fmtMoney(netKicker)}.`);
+  }
 }
 
 /* ---------------- Billing ---------------- */

@@ -45,6 +45,17 @@ INTERVIEW.start = function (firmId, track, onDone) {
   function nextQuestion() {
     if (idx >= questions.length) return finish();
     const q = questions[idx];
+
+    // Shuffle option order (and track the new correct index) fresh each time,
+    // so the right answer's position isn't a fixed, memorizable spot.
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    const shuffledOptions = order.map(i => q.options[i]);
+    const shuffledCorrectIndex = order.indexOf(q.correct);
+
     let timeLeft = IV_TIMER_SECONDS;
     let timer = null;
     openModalHTML(`
@@ -56,11 +67,11 @@ INTERVIEW.start = function (firmId, track, onDone) {
       </div>
     `);
     const optsEl = document.getElementById("iv-options");
-    q.options.forEach((opt, i) => {
+    shuffledOptions.forEach((opt, i) => {
       const btn = document.createElement("button");
       btn.className = "btn option-btn";
       btn.textContent = opt;
-      btn.onclick = () => answer(i === q.correct);
+      btn.onclick = () => answer(i === shuffledCorrectIndex);
       optsEl.appendChild(btn);
     });
 

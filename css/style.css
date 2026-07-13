@@ -205,6 +205,21 @@ html, body {
 .reflex-box.go { background: #1f7a4d; color: #d3ffe9; }
 .reflex-box.early { background: #444; color: #ccc; }
 
+.simon-grid {
+  margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.simon-box {
+  height: 90px; border-radius: 12px; border: 1px solid var(--navy-600);
+  background: var(--navy-700); color: var(--text); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+}
+.simon-box:disabled { cursor: default; }
+.simon-box.active { background: var(--gold); color: var(--navy-950); border-color: var(--gold-bright); transform: scale(1.04); }
+.simon-box:nth-child(1) { border-top: 3px solid #4fa3e3; }
+.simon-box:nth-child(2) { border-top: 3px solid #3ecf8e; }
+.simon-box:nth-child(3) { border-top: 3px solid #e5586b; }
+.simon-box:nth-child(4) { border-top: 3px solid #d4af37; }
+
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 640px) {
@@ -260,4 +275,5 @@ html, body {
 .ui-mobile .option-btn { min-height: 50px; }
 .ui-mobile .layout-choice { flex-direction: column; }
 .ui-mobile .reflex-box { height: 170px; font-size: 1.6rem; }
+.ui-mobile .simon-box { height: 110px; font-size: 1.15rem; }
 .ui-mobile .toast { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
