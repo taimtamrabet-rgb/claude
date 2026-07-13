@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ENGINE.JS — all game actions and the weekly simulation tick.
+   ENGINE.JS — all game actions and the monthly simulation tick.
    ========================================================================== */
 
 const ENGINE = {};
@@ -56,8 +56,8 @@ ENGINE.doTraining = function (actionId) {
 ENGINE.firmEligibility = function (firmId) {
   const firm = DATA.FIRMS.find(f => f.id === firmId);
   const reasons = [];
-  if (firm.type === "PE" && STATE.ibExperienceWeeks < firm.minIBWeeks) {
-    reasons.push(`Requires ${Math.round(firm.minIBWeeks / 52 * 10) / 10}+ years of IB experience.`);
+  if (firm.type === "PE" && STATE.ibExperienceMonths < firm.minIBMonths) {
+    reasons.push(`Requires ${Math.round(firm.minIBMonths / 12 * 10) / 10}+ years of IB experience.`);
   }
   if (STATE.skills.networking < firm.reqNetworking) reasons.push(`Needs Networking ${firm.reqNetworking}+ (you: ${STATE.skills.networking}).`);
   if (STATE.skills.communication < firm.reqComm) reasons.push(`Needs Communication ${firm.reqComm}+ (you: ${STATE.skills.communication}).`);
@@ -73,8 +73,8 @@ ENGINE.hireAtFirm = function (firmId, track, offerScore) {
 
   STATE.employment = {
     firmId, track, titleIndex,
-    weeksInTitle: 0,
-    weeksAtFirm: 0,
+    monthsInTitle: 0,
+    monthsAtFirm: 0,
     perfAccum: [],
     yearPerfAccum: [],
     strikes: 0
@@ -96,7 +96,7 @@ ENGINE.resign = function () {
 /* ---------------- MBA ---------------- */
 
 ENGINE.canStartMBA = function () {
-  return (STATE.careerWeeksWorked || 0) >= 156 && !STATE.education.inMBA && !STATE.education.hasMBA;
+  return (STATE.careerMonthsWorked || 0) >= 36 && !STATE.education.inMBA && !STATE.education.hasMBA;
 };
 
 ENGINE.startMBA = function (recruitTarget) {
@@ -104,7 +104,7 @@ ENGINE.startMBA = function (recruitTarget) {
   if (STATE.employment) ENGINE.resign();
   STATE.debt += 220000;
   STATE.education.inMBA = true;
-  STATE.education.mbaWeeksLeft = 104;
+  STATE.education.mbaMonthsLeft = 24;
   STATE.education.recruitTarget = recruitTarget;
   STATE.education.perfAccum = [];
   addStress(8);
@@ -121,7 +121,7 @@ function graduateMBA() {
   logEvent(`You graduated with your MBA. Recruiting performance score: ${(avg * 100).toFixed(0)}/100.`);
 
   const target = STATE.education.recruitTarget || "IB";
-  let candidates = DATA.FIRMS.filter(f => f.type === target && (target === "IB" || STATE.ibExperienceWeeks >= f.minIBWeeks));
+  let candidates = DATA.FIRMS.filter(f => f.type === target && (target === "IB" || STATE.ibExperienceMonths >= f.minIBMonths));
   if (candidates.length === 0) candidates = DATA.FIRMS.filter(f => f.type === "IB");
   candidates = candidates.slice().sort((a, b) => a.prestige - b.prestige);
 
@@ -142,7 +142,7 @@ ENGINE.moveApartment = function (aptId) {
   if (apt.minTitleTrack && !meetsSeniority(apt.minTitleTrack)) {
     return { ok: false, msg: `You need to be at least a ${apt.minTitleTrack} to qualify for this address.` };
   }
-  if (!canAfford(apt.moveInCost)) return { ok: false, msg: "You can't afford the move-in cost (deposit + first week)." };
+  if (!canAfford(apt.moveInCost)) return { ok: false, msg: "You can't afford the move-in cost (deposit + fees)." };
   spend(apt.moveInCost);
   STATE.apartmentId = aptId;
   STATE.evictionWarnings = 0;
@@ -162,7 +162,7 @@ ENGINE.buyCar = function (carId, financed) {
   if (STATE.car.balance > 0) return { ok: false, msg: "Pay off or sell your current car first." };
 
   if (carId === "none") {
-    STATE.car = { id: "none", balance: 0, weeksSinceBill: 0, missedPayments: 0 };
+    STATE.car = { id: "none", balance: 0, missedPayments: 0 };
     logEvent("You sold your car. Back to the subway.");
     save();
     return { ok: true };
@@ -171,12 +171,12 @@ ENGINE.buyCar = function (carId, financed) {
   if (financed) {
     if (!canAfford(car.downPayment)) return { ok: false, msg: "You can't afford the down payment." };
     spend(car.downPayment);
-    STATE.car = { id: carId, balance: car.cashPrice - car.downPayment, weeksSinceBill: 0, missedPayments: 0 };
+    STATE.car = { id: carId, balance: car.cashPrice - car.downPayment, missedPayments: 0 };
     logEvent(`You financed a ${car.name}. Down payment: ${fmtMoney(car.downPayment)}.`);
   } else {
     if (!canAfford(car.cashPrice)) return { ok: false, msg: "You can't afford this car in cash." };
     spend(car.cashPrice);
-    STATE.car = { id: carId, balance: 0, weeksSinceBill: 0, missedPayments: 0 };
+    STATE.car = { id: carId, balance: 0, missedPayments: 0 };
     logEvent(`You bought a ${car.name} in cash.`);
   }
   addReputation(Math.round(car.reputation / 2));
@@ -328,17 +328,25 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
     save();
     return { hired: false, outcome };
   }
-  if (outcome === "borderline" && Math.random() < 0.3) {
-    logEvent(`${firm.name} put you on the waitlist. Not this time.`);
-    addStress(3);
+
+  // Even a good interview doesn't guarantee an offer -- more prestigious firms
+  // have far more applicants per seat, independent of how well you did.
+  const competitiveness = firm.competitiveness != null ? firm.competitiveness : 0.3;
+  const tierBaseChance = { strong: 0.92, pass: 0.72, borderline: 0.45 }[outcome];
+  const hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
+
+  if (Math.random() > hireChance) {
+    logEvent(`${firm.name} liked what they saw, but the seat went to another candidate — roles at a ${firm.tier} shop are brutally competitive.`);
+    addStress(4);
     save();
     return { hired: false, outcome };
   }
+
   ENGINE.hireAtFirm(firmId, track, finalScore);
   return { hired: true, outcome };
 };
 
-/* ---------------- Weekly work performance -> pay math ---------------- */
+/* ---------------- Monthly work performance -> pay math ---------------- */
 
 function performanceToBonusMult(range, score) {
   return range[0] + (range[1] - range[0]) * score;
@@ -354,33 +362,33 @@ function effectiveTaxRate(annualIncome) {
   return 0.43;
 }
 
-function payWeeklyPaycheck() {
+function payMonthlyPaycheck() {
   if (!STATE.employment) return;
   const annual = currentBaseSalary();
-  const grossWeekly = annual / 52;
-  const netWeekly = grossWeekly * (1 - effectiveTaxRate(annual));
-  STATE.cash += netWeekly;
+  const grossMonthly = annual / 12;
+  const netMonthly = grossMonthly * (1 - effectiveTaxRate(annual));
+  STATE.cash += netMonthly;
 }
 
 function checkPromotion() {
   const e = STATE.employment;
   const track = e.track;
   const titles = track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
-  const weeksArr = track === "IB" ? DATA.WEEKS_PER_TITLE_IB : DATA.WEEKS_PER_TITLE_PE;
-  const weeksNeeded = weeksArr[e.titleIndex];
-  if (e.weeksInTitle < weeksNeeded) return;
+  const monthsArr = track === "IB" ? DATA.MONTHS_PER_TITLE_IB : DATA.MONTHS_PER_TITLE_PE;
+  const monthsNeeded = monthsArr[e.titleIndex];
+  if (e.monthsInTitle < monthsNeeded) return;
   if (e.titleIndex >= titles.length - 1) return; // already at top
 
   const avg = e.perfAccum.length ? e.perfAccum.reduce((a, b) => a + b, 0) / e.perfAccum.length : 0.4;
   if (avg >= 0.45) {
     e.titleIndex++;
-    e.weeksInTitle = 0;
+    e.monthsInTitle = 0;
     e.perfAccum = [];
     addReputation(8);
     logEvent(`Promoted to ${titles[e.titleIndex]}! Your hard work paid off.`);
   } else {
     // Not promoted on schedule; gentle reset window, slight morale hit
-    e.weeksInTitle = Math.round(weeksNeeded * 0.5);
+    e.monthsInTitle = Math.round(monthsNeeded * 0.5);
     addStress(6);
     logEvent(`You were passed over for promotion this cycle. Performance needs to improve.`);
   }
@@ -405,7 +413,7 @@ function payYearEndBonus() {
 function billRent() {
   if (!STATE.apartmentId) return;
   const apt = DATA.APARTMENTS.find(a => a.id === STATE.apartmentId);
-  STATE.cash -= apt.weeklyRent;
+  STATE.cash -= apt.monthlyRent;
   if (STATE.cash < -1500) {
     STATE.evictionWarnings++;
     addStress(4);
@@ -422,9 +430,6 @@ function billRent() {
 
 function billCarLoan() {
   if (STATE.car.balance <= 0) return;
-  STATE.weeksSinceCarBill = (STATE.weeksSinceCarBill || 0) + 1;
-  if (STATE.weeksSinceCarBill < 4) return;
-  STATE.weeksSinceCarBill = 0;
   const car = DATA.CARS.find(c => c.id === STATE.car.id);
   if (STATE.cash >= car.monthlyPayment) {
     STATE.cash -= car.monthlyPayment;
@@ -437,7 +442,7 @@ function billCarLoan() {
     logEvent(`You missed your car payment on the ${car.name}.`);
     if (STATE.car.missedPayments >= 3) {
       logEvent(`Your ${car.name} was repossessed.`);
-      STATE.car = { id: "none", balance: 0, weeksSinceBill: 0, missedPayments: 0 };
+      STATE.car = { id: "none", balance: 0, missedPayments: 0 };
       addReputation(-10);
     }
   }
@@ -445,9 +450,6 @@ function billCarLoan() {
 
 function billStudentLoan() {
   if (STATE.debt <= 0) return;
-  STATE.weeksSinceLoanBill = (STATE.weeksSinceLoanBill || 0) + 1;
-  if (STATE.weeksSinceLoanBill < 4) return;
-  STATE.weeksSinceLoanBill = 0;
 
   if (STATE.loanPaymentDue) {
     // Payment was due and never made -> penalty
@@ -470,9 +472,9 @@ function billStudentLoan() {
 }
 
 function billSavingsAndInvestments() {
-  STATE.savings *= (1 + DATA.SAVINGS_APY / 52);
+  STATE.savings *= (1 + DATA.SAVINGS_APY / 12);
   if (STATE.investment > 0) {
-    STATE.investment *= (1 + rand(-0.03, 0.035));
+    STATE.investment *= (1 + rand(-0.06, 0.07));
   }
 }
 
@@ -498,20 +500,20 @@ function datingDecay() {
   });
 }
 
-/* ---------------- Week advance orchestration ---------------- */
+/* ---------------- Month advance orchestration ---------------- */
 
-ENGINE.needsMinigameThisWeek = function () {
+ENGINE.needsMinigameThisMonth = function () {
   return !!STATE.employment || STATE.education.inMBA;
 };
 
-ENGINE.finishWeek = function (perfScore) {
+ENGINE.finishMonth = function (perfScore) {
   if (STATE.gameOver) return;
 
   // Age up
-  STATE.ageWeeks++;
-  STATE.totalWeeks++;
-  if (STATE.ageWeeks >= 52) {
-    STATE.ageWeeks = 0;
+  STATE.ageMonths++;
+  STATE.totalMonths++;
+  if (STATE.ageMonths >= 12) {
+    STATE.ageMonths = 0;
     STATE.ageYears++;
     addHappiness(5);
     logEvent(`Happy birthday — you're now ${STATE.ageYears}.`);
@@ -519,19 +521,19 @@ ENGINE.finishWeek = function (perfScore) {
 
   // Work / school performance
   if (STATE.employment && perfScore !== null && perfScore !== undefined) {
-    payWeeklyPaycheck();
+    payMonthlyPaycheck();
     STATE.employment.perfAccum.push(perfScore);
     STATE.employment.yearPerfAccum = STATE.employment.yearPerfAccum || [];
     STATE.employment.yearPerfAccum.push(perfScore);
-    STATE.employment.weeksInTitle++;
-    STATE.employment.weeksAtFirm++;
-    STATE.careerWeeksWorked = (STATE.careerWeeksWorked || 0) + 1;
-    if (STATE.employment.track === "IB") STATE.ibExperienceWeeks++;
+    STATE.employment.monthsInTitle++;
+    STATE.employment.monthsAtFirm++;
+    STATE.careerMonthsWorked = (STATE.careerMonthsWorked || 0) + 1;
+    if (STATE.employment.track === "IB") STATE.ibExperienceMonths++;
 
     if (perfScore < 0.2) {
       STATE.employment.strikes++;
       addStress(8);
-      logEvent(`Rough week at the desk. Your MD noticed. (Strike ${STATE.employment.strikes}/3)`);
+      logEvent(`Rough month at the desk. Your MD noticed. (Strike ${STATE.employment.strikes}/3)`);
       if (STATE.employment.strikes >= 3) {
         const firmName = currentFirm().name;
         logEvent(`You were let go from ${firmName} after repeated performance issues.`);
@@ -545,7 +547,7 @@ ENGINE.finishWeek = function (perfScore) {
     }
 
     if (STATE.employment) {
-      if (STATE.employment.weeksAtFirm > 0 && STATE.employment.weeksAtFirm % 52 === 0) {
+      if (STATE.employment.monthsAtFirm > 0 && STATE.employment.monthsAtFirm % 12 === 0) {
         payYearEndBonus();
         STATE.employment.yearPerfAccum = [];
       }
@@ -555,8 +557,8 @@ ENGINE.finishWeek = function (perfScore) {
   } else if (STATE.education.inMBA && perfScore !== null && perfScore !== undefined) {
     STATE.education.perfAccum = STATE.education.perfAccum || [];
     STATE.education.perfAccum.push(perfScore);
-    STATE.education.mbaWeeksLeft--;
-    if (STATE.education.mbaWeeksLeft <= 0) {
+    STATE.education.mbaMonthsLeft--;
+    if (STATE.education.mbaMonthsLeft <= 0) {
       graduateMBA();
     }
   }
@@ -569,7 +571,7 @@ ENGINE.finishWeek = function (perfScore) {
   datingDecay();
   maybeRandomEvent();
 
-  // Energy & stress natural drift (weekend recovery)
+  // Energy & stress natural drift (monthly reset)
   STATE.energy = clamp(STATE.energy + 100, 0, STATE.maxEnergy);
   if (STATE.stress > 60) addHappiness(-2);
   addStress(STATE.happiness > 55 ? -3 : 1);

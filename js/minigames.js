@@ -1,7 +1,7 @@
 /* ==========================================================================
-   MINIGAMES.JS — the "actually do the work" mandatory weekly minigames.
+   MINIGAMES.JS — the "actually do the work" mandatory monthly minigames.
    Two variants (Model Crunch, All-Nighter Reflex) alternate/roll randomly.
-   Both resolve to a 0..1 performance score fed back into ENGINE.finishWeek.
+   Both resolve to a 0..1 performance score fed back into ENGINE.finishMonth.
    ========================================================================== */
 
 const MINIGAMES = {};
@@ -255,14 +255,14 @@ function launchReflex(title, onDone) {
 /* ---------------- Public entry point ---------------- */
 
 MINIGAMES.launch = function (kind, onComplete) {
-  const title = kind === "study" ? "Study Session" : (currentFirm() ? currentFirm().name + " — This Week's Grind" : "This Week's Grind");
+  const title = kind === "study" ? "Study Session" : (currentFirm() ? currentFirm().name + " — This Month's Grind" : "This Month's Grind");
   const useReflex = Math.random() < 0.5;
   const wrapUp = (score, raw, correct, total) => {
     let verdict;
-    if (score >= 0.75) verdict = "Excellent work this week.";
+    if (score >= 0.75) verdict = "Excellent work this month.";
     else if (score >= 0.5) verdict = "Solid, steady performance.";
-    else if (score >= 0.3) verdict = "A shaky week — mistakes crept in.";
-    else verdict = "A brutal week. Your work was sloppy.";
+    else if (score >= 0.3) verdict = "A shaky month — mistakes crept in.";
+    else verdict = "A brutal month. Your work was sloppy.";
     showMinigameResult(title, verdict, score, () => onComplete(score));
   };
   if (useReflex) launchReflex(title, wrapUp);

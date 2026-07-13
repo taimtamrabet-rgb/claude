@@ -44,17 +44,17 @@ UI.renderAll = function () {
 /* ---------------- Header ---------------- */
 
 UI.renderHeader = function () {
-  const year = Math.floor(STATE.totalWeeks / 52) + 1;
-  const week = (STATE.totalWeeks % 52) + 1;
+  const year = Math.floor(STATE.totalMonths / 12) + 1;
+  const month = (STATE.totalMonths % 12) + 1;
   let statusLine;
-  if (STATE.education.inMBA) statusLine = `MBA Student (Year ${Math.ceil((104 - STATE.education.mbaWeeksLeft + 1) / 52)})`;
+  if (STATE.education.inMBA) statusLine = `MBA Student (Year ${Math.ceil((24 - STATE.education.mbaMonthsLeft + 1) / 12)})`;
   else if (STATE.employment) statusLine = `${currentTitleTrackName()} @ ${currentFirm().name}`;
   else statusLine = "Unemployed — job hunting";
 
   el("header").innerHTML = `
     <div class="hdr-row1">
       <div class="hdr-name">${STATE.name}</div>
-      <div class="hdr-age">Age ${ageString()} · Career Year ${year}, Week ${week}</div>
+      <div class="hdr-age">Age ${ageString()} · Career Year ${year}, Month ${month}</div>
       <div class="hdr-status">${statusLine}</div>
       <button class="layout-toggle" onclick="UI.toggleUIMode()" title="Switch layout" aria-label="Switch layout">${STATE.uiMode === "mobile" ? "🖥️" : "📱"}</button>
     </div>
@@ -84,7 +84,7 @@ const TAB_LIST = [
 UI.renderTabs = function () {
   el("tabs").innerHTML = TAB_LIST.map(([id, label]) =>
     `<button class="tab-btn ${UI.activeTab === id ? "active" : ""}" onclick="UI.setTab('${id}')">${label}</button>`
-  ).join("") + `<button class="tab-btn end-week-btn" onclick="UI.endWeek()">End Week &rarr;</button>`;
+  ).join("") + `<button class="tab-btn end-month-btn" onclick="UI.endMonth()">End Month &rarr;</button>`;
 };
 
 UI.renderTabContent = function () {
@@ -106,20 +106,20 @@ UI.renderDashboard = function () {
 
   let careerCard;
   if (STATE.education.inMBA) {
-    const pct = Math.round((104 - STATE.education.mbaWeeksLeft) / 104 * 100);
-    careerCard = `<div class="card"><h3>Business School</h3><p>Full-time MBA program in progress.</p><div class="progress-outer"><div class="progress-inner" style="width:${pct}%"></div></div><p class="muted">${STATE.education.mbaWeeksLeft} weeks remaining. Recruiting for: ${STATE.education.recruitTarget}</p></div>`;
+    const pct = Math.round((24 - STATE.education.mbaMonthsLeft) / 24 * 100);
+    careerCard = `<div class="card"><h3>Business School</h3><p>Full-time MBA program in progress.</p><div class="progress-outer"><div class="progress-inner" style="width:${pct}%"></div></div><p class="muted">${STATE.education.mbaMonthsLeft} months remaining. Recruiting for: ${STATE.education.recruitTarget}</p></div>`;
   } else if (STATE.employment) {
     const e = STATE.employment;
     const titles = e.track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
-    const weeksArr = e.track === "IB" ? DATA.WEEKS_PER_TITLE_IB : DATA.WEEKS_PER_TITLE_PE;
-    const need = weeksArr[e.titleIndex];
-    const pct = clamp(Math.round(e.weeksInTitle / need * 100), 0, 100);
+    const monthsArr = e.track === "IB" ? DATA.MONTHS_PER_TITLE_IB : DATA.MONTHS_PER_TITLE_PE;
+    const need = monthsArr[e.titleIndex];
+    const pct = clamp(Math.round(e.monthsInTitle / need * 100), 0, 100);
     const avgPerf = e.perfAccum.length ? Math.round(e.perfAccum.reduce((a, b) => a + b, 0) / e.perfAccum.length * 100) : null;
     careerCard = `<div class="card">
       <h3>${currentFirm().name}</h3>
       <p>${titles[e.titleIndex]} · Base ${fmtMoney(currentBaseSalary())}/yr</p>
       <div class="progress-outer" title="Promotion progress"><div class="progress-inner" style="width:${pct}%"></div></div>
-      <p class="muted">Promotion track: ${e.weeksInTitle}/${need} weeks · Avg performance: ${avgPerf === null ? "—" : avgPerf + "/100"} · Strikes: ${e.strikes}/3</p>
+      <p class="muted">Promotion track: ${e.monthsInTitle}/${need} months · Avg performance: ${avgPerf === null ? "—" : avgPerf + "/100"} · Strikes: ${e.strikes}/3</p>
     </div>`;
   } else {
     careerCard = `<div class="card"><h3>Unemployed</h3><p>Head to the Career tab to network your way into interviews.</p></div>`;
@@ -135,7 +135,7 @@ UI.renderDashboard = function () {
       </div>
       <div class="card">
         <h3>Living Situation</h3>
-        <p>${apt ? apt.name : "No apartment"} ${apt ? `— ${fmtMoney(apt.weeklyRent)}/week` : ""}</p>
+        <p>${apt ? apt.name : "No apartment"} ${apt ? `— ${fmtMoney(apt.monthlyRent)}/month` : ""}</p>
         <p>${car ? car.name + (STATE.car.balance > 0 ? ` (balance ${fmtMoney(STATE.car.balance)})` : " (paid off)") : "No car"}</p>
       </div>
       <div class="card">
@@ -172,7 +172,7 @@ UI.renderCareer = function () {
   if (STATE.employment) {
     html += UI.renderCurrentJobCard();
   } else if (STATE.education.inMBA) {
-    html += `<div class="card"><h3>Currently enrolled full-time in an MBA program.</h3><p class="muted">${STATE.education.mbaWeeksLeft} weeks left. Advance the week to keep studying.</p></div>`;
+    html += `<div class="card"><h3>Currently enrolled full-time in an MBA program.</h3><p class="muted">${STATE.education.mbaMonthsLeft} months left. Advance the month to keep studying.</p></div>`;
     return html;
   }
 
@@ -207,21 +207,29 @@ UI.renderCurrentJobCard = function () {
     <h3>${firm.name} — ${titles[e.titleIndex]}</h3>
     <p>${firm.blurb}</p>
     <p>Base Salary: <b>${fmtMoney(currentBaseSalary())}</b>/yr</p>
-    <p class="muted">Weeks at firm: ${e.weeksAtFirm} · Strikes: ${e.strikes}/3</p>
+    <p class="muted">Months at firm: ${e.monthsAtFirm} · Strikes: ${e.strikes}/3</p>
     <div class="btn-row">
       <button class="btn btn-danger" onclick="UI.resign()">Resign</button>
     </div>
   </div>`;
 };
 
+function competitivenessLabel(c) {
+  if (c >= 0.8) return "Extremely High";
+  if (c >= 0.6) return "High";
+  if (c >= 0.35) return "Medium";
+  return "Low";
+}
+
 UI.firmCardHTML = function (f) {
   const elig = ENGINE.firmEligibility(f.id);
   const isCurrent = STATE.employment && STATE.employment.firmId === f.id;
+  const competitiveness = f.competitiveness != null ? f.competitiveness : 0.3;
   return `<div class="card firm-card ${isCurrent ? "current" : ""}">
     <h4>${f.name}</h4>
-    <p class="muted">${f.tier}</p>
+    <p class="muted">${f.tier} · Competitiveness: ${competitivenessLabel(competitiveness)}</p>
     <p>${f.blurb}</p>
-    <p class="muted">Req: Networking ${f.reqNetworking}+, Communication ${f.reqComm}+${f.minIBWeeks ? `, ${Math.round(f.minIBWeeks / 52 * 10) / 10}+ yrs IB` : ""}</p>
+    <p class="muted">Req: Networking ${f.reqNetworking}+, Communication ${f.reqComm}+${f.minIBMonths ? `, ${Math.round(f.minIBMonths / 12 * 10) / 10}+ yrs IB` : ""}</p>
     ${isCurrent ? '<p class="muted">Your current employer</p>' :
       elig.eligible
         ? `<button class="btn" onclick="UI.applyToFirm('${f.id}','${f.type}')">Interview</button>`
@@ -308,7 +316,7 @@ UI.renderBank = function () {
       <div class="card">
         <h3>Index Fund Investment</h3>
         <p class="big-num">${fmtMoney(STATE.investment)}</p>
-        <p class="muted">Fluctuates weekly with the market.</p>
+        <p class="muted">Fluctuates monthly with the market.</p>
         <div class="btn-row">
           <input type="number" id="invest-amt" class="num-input" placeholder="Amount" min="0">
           <button class="btn" onclick="UI.bankAction('invest')">Invest</button>
@@ -366,7 +374,7 @@ UI.renderHousing = function (forced) {
         return `<div class="card ${isCurrent ? "current" : ""}">
           <h4>${a.name}</h4>
           <p>${a.blurb}</p>
-          <p class="muted">Rent ${fmtMoney(a.weeklyRent)}/week · Move-in cost ${fmtMoney(a.moveInCost)}</p>
+          <p class="muted">Rent ${fmtMoney(a.monthlyRent)}/month · Move-in cost ${fmtMoney(a.moveInCost)}</p>
           ${isCurrent ? '<p class="muted">Current residence</p>' :
             locked ? `<p class="locked">Requires ${a.minTitleTrack}+ title</p>` :
             `<button class="btn" onclick="UI.moveApartment('${a.id}')">Move In</button>`}
@@ -448,18 +456,18 @@ UI.dating = function (action, id) {
 /* ---------------- Journal ---------------- */
 
 UI.renderJournal = function () {
-  return `<div class="card"><ul class="log-list full">${STATE.log.map(l => `<li><span class="muted">Wk ${l.week}</span> ${l.text}</li>`).join("") || "<li>Nothing yet.</li>"}</ul></div>`;
+  return `<div class="card"><ul class="log-list full">${STATE.log.map(l => `<li><span class="muted">Mo ${l.month}</span> ${l.text}</li>`).join("") || "<li>Nothing yet.</li>"}</ul></div>`;
 };
 
-/* ---------------- Week advance ---------------- */
+/* ---------------- Month advance ---------------- */
 
-UI.endWeek = function () {
+UI.endMonth = function () {
   if (STATE.gameOver) return;
-  if (ENGINE.needsMinigameThisWeek()) {
+  if (ENGINE.needsMinigameThisMonth()) {
     const kind = STATE.education.inMBA ? "study" : "work";
-    MINIGAMES.launch(kind, (score) => { ENGINE.finishWeek(score); UI.renderAll(); });
+    MINIGAMES.launch(kind, (score) => { ENGINE.finishMonth(score); UI.renderAll(); });
   } else {
-    ENGINE.finishWeek(null);
+    ENGINE.finishMonth(null);
     UI.renderAll();
   }
 };

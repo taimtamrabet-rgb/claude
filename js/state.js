@@ -48,15 +48,14 @@ function generateDatingPool() {
 }
 
 function newGame(name) {
-  const termMonths = DATA.LOAN_TERM_WEEKS / (52 / 12);
-  const minMonthly = calcMonthlyLoanPayment(DATA.STARTING_DEBT, DATA.LOAN_APR, Math.round(termMonths));
+  const minMonthly = calcMonthlyLoanPayment(DATA.STARTING_DEBT, DATA.LOAN_APR, DATA.LOAN_TERM_MONTHS);
 
   Object.assign(STATE, {
     name: name || "Alex Ward",
     uiMode: "desktop",
     ageYears: 22,
-    ageWeeks: 0,
-    totalWeeks: 0,
+    ageMonths: 0,
+    totalMonths: 0,
     cash: DATA.STARTING_CASH,
     savings: 0,
     investment: 0,
@@ -65,7 +64,6 @@ function newGame(name) {
     loanMinPayment: minMonthly,
     loanPaymentDue: false,
     loanMissedPayments: 0,
-    weeksSinceLoanBill: 0,
 
     energy: 150,
     maxEnergy: 150,
@@ -78,17 +76,17 @@ function newGame(name) {
     connections: {}, // firmId -> number
 
     apartmentId: null,
-    weeksSinceRentBill: 0,
     evictionWarnings: 0,
 
-    car: { id: "none", balance: 0, weeksSinceBill: 0, missedPayments: 0 },
+    car: { id: "none", balance: 0, missedPayments: 0 },
 
-    employment: null, // {firmId, track, titleIndex, weeksInTitle, weeksAtFirm, perfAccum:[], strikes, yearWeeks}
-    ibExperienceWeeks: 0,
+    employment: null, // {firmId, track, titleIndex, monthsInTitle, monthsAtFirm, perfAccum:[], strikes}
+    ibExperienceMonths: 0,
+    careerMonthsWorked: 0,
 
-    education: { inMBA: false, mbaWeeksLeft: 0, hasMBA: false, mbaOfferMade: false },
+    education: { inMBA: false, mbaMonthsLeft: 0, hasMBA: false, mbaOfferMade: false },
 
-    dating: { pool: generateDatingPool(), partnerId: null, married: false, weeksSinceDateBill: 0 },
+    dating: { pool: generateDatingPool(), partnerId: null, married: false },
 
     log: [],
     gameOver: false,
@@ -102,7 +100,7 @@ function newGame(name) {
 }
 
 function logEvent(text) {
-  STATE.log.unshift({ week: STATE.totalWeeks, text });
+  STATE.log.unshift({ month: STATE.totalMonths, text });
   if (STATE.log.length > 200) STATE.log.length = 200;
 }
 
@@ -176,5 +174,5 @@ function netWorth() {
 }
 
 function ageString() {
-  return STATE.ageYears + "y " + STATE.ageWeeks + "w";
+  return STATE.ageYears + "y " + STATE.ageMonths + "m";
 }

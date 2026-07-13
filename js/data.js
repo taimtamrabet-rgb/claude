@@ -18,7 +18,7 @@ DATA.BONUS_RANGE_IB = [
   [0.40, 1.20], [0.45, 1.30], [0.50, 1.40],
   [0.60, 1.50], [0.80, 2.00], [1.00, 4.00]
 ];
-DATA.WEEKS_PER_TITLE_IB = [52, 52, 52, 78, 78, 78, 104, 156, 999999];
+DATA.MONTHS_PER_TITLE_IB = [12, 12, 12, 18, 18, 18, 24, 36, 999999];
 
 DATA.TITLES_PE = [
   "PE Associate", "Senior Associate", "Vice President", "Principal", "Partner / MD"
@@ -27,44 +27,44 @@ DATA.BASE_PE = [150000, 175000, 225000, 275000, 350000];
 DATA.BONUS_RANGE_PE = [
   [0.30, 0.80], [0.40, 1.00], [0.60, 1.30], [0.80, 1.80], [1.20, 3.00]
 ];
-DATA.WEEKS_PER_TITLE_PE = [104, 104, 104, 156, 999999];
+DATA.MONTHS_PER_TITLE_PE = [24, 24, 24, 36, 999999];
 
 /* ---------------- Firms ---------------- */
 
 DATA.FIRMS = [
   {
     id: "kessler", name: "Kessler Harbor & Co.", type: "IB", tier: "Middle Market",
-    mult: 0.80, reqNetworking: 5, reqComm: 5, prestige: 35,
+    mult: 0.80, reqNetworking: 5, reqComm: 5, prestige: 35, competitiveness: 0.10,
     interviewWeights: { easy: 1.0, medium: 0, hard: 0 },
     blurb: "A scrappy regional M&A shop. Long hours, thinner deals, easier door in."
   },
   {
     id: "ashford", name: "Ashford & Cole", type: "IB", tier: "Elite Boutique",
-    mult: 1.05, reqNetworking: 30, reqComm: 30, prestige: 72,
+    mult: 1.05, reqNetworking: 30, reqComm: 30, prestige: 72, competitiveness: 0.55,
     interviewWeights: { easy: 0.60, medium: 0.30, hard: 0.10 },
     blurb: "Elite boutique advisory. Small teams, huge deals, brutal interviews."
   },
   {
     id: "blackrose", name: "Blackrose Stanton", type: "IB", tier: "Bulge Bracket",
-    mult: 1.15, reqNetworking: 50, reqComm: 45, prestige: 90,
+    mult: 1.15, reqNetworking: 50, reqComm: 45, prestige: 90, competitiveness: 0.62,
     interviewWeights: { easy: 0.45, medium: 0.35, hard: 0.20 },
     blurb: "A household-name global bank. The classic Wall Street grind."
   },
   {
     id: "continental", name: "Continental Vance", type: "IB", tier: "Bulge Bracket",
-    mult: 1.20, reqNetworking: 58, reqComm: 52, prestige: 96,
+    mult: 1.20, reqNetworking: 58, reqComm: 52, prestige: 96, competitiveness: 0.75,
     interviewWeights: { easy: 0.35, medium: 0.40, hard: 0.25 },
     blurb: "The most prestigious address in banking. Everyone wants in."
   },
   {
     id: "ironbridge", name: "Ironbridge Capital", type: "PE", tier: "Middle Market PE",
-    mult: 0.90, reqNetworking: 25, reqComm: 20, prestige: 60, minIBWeeks: 96,
+    mult: 0.90, reqNetworking: 25, reqComm: 20, prestige: 60, minIBMonths: 24, competitiveness: 0.45,
     interviewWeights: { easy: 0.45, medium: 0.35, hard: 0.20 },
     blurb: "Mid-market buyout shop. Wants ex-banking analysts who can model."
   },
   {
     id: "summit", name: "Summit Crown Partners", type: "PE", tier: "Mega Fund",
-    mult: 1.30, reqNetworking: 65, reqComm: 55, prestige: 99, minIBWeeks: 96,
+    mult: 1.30, reqNetworking: 65, reqComm: 55, prestige: 99, minIBMonths: 24, competitiveness: 0.85,
     interviewWeights: { easy: 0.30, medium: 0.40, hard: 0.30 },
     blurb: "A legendary mega-fund. The most coveted seat in all of finance."
   }
@@ -74,27 +74,27 @@ DATA.FIRMS = [
 
 DATA.APARTMENTS = [
   {
-    id: "basement", name: "Parents' Basement", weeklyRent: 0, moveInCost: 0,
+    id: "basement", name: "Parents' Basement", monthlyRent: 0, moveInCost: 0,
     reputation: -8, networking: -10, dating: -20, stressRelief: 4,
     blurb: "Free rent. Your mom still does your laundry. Recruiters can smell it."
   },
   {
-    id: "roommates", name: "Shared Studio, Outer Borough", weeklyRent: 325, moveInCost: 650,
+    id: "roommates", name: "Shared Studio, Outer Borough", monthlyRent: 1400, moveInCost: 650,
     reputation: -2, networking: 0, dating: -5, stressRelief: 0,
     blurb: "Three roommates, one bathroom, a 55-minute commute."
   },
   {
-    id: "onebr", name: "1BR, Midtown-Adjacent", weeklyRent: 650, moveInCost: 1950,
+    id: "onebr", name: "1BR, Midtown-Adjacent", monthlyRent: 2800, moveInCost: 1950,
     reputation: 4, networking: 4, dating: 6, stressRelief: 2,
     blurb: "Your own place. Walkable to the office. Actually feels like adulthood."
   },
   {
-    id: "luxury", name: "Luxury High-Rise 1BR", weeklyRent: 1150, moveInCost: 4600,
+    id: "luxury", name: "Luxury High-Rise 1BR", monthlyRent: 5000, moveInCost: 4600,
     reputation: 12, networking: 8, dating: 16, stressRelief: 6,
     blurb: "Doorman, gym, rooftop. The kind of address that impresses a date."
   },
   {
-    id: "penthouse", name: "Penthouse Suite", weeklyRent: 2750, moveInCost: 13750,
+    id: "penthouse", name: "Penthouse Suite", monthlyRent: 12000, moveInCost: 13750,
     reputation: 25, networking: 12, dating: 28, stressRelief: 10,
     minTitleTrack: "VP",
     blurb: "Skyline views from every room. You've made it, and everyone knows it."
@@ -104,11 +104,11 @@ DATA.APARTMENTS = [
 /* ---------------- Cars ---------------- */
 
 DATA.CARS = [
-  { id: "none", name: "No Car (Subway/Uber)", cashPrice: 0, downPayment: 0, monthlyPayment: 0, termWeeks: 0, reputation: 0, dating: 0 },
-  { id: "civic", name: "Used Honda Civic", cashPrice: 8000, downPayment: 1500, monthlyPayment: 180, termWeeks: 156, reputation: 1, dating: 0 },
-  { id: "bmw", name: "Certified Pre-Owned BMW 3-Series", cashPrice: 28000, downPayment: 4000, monthlyPayment: 520, termWeeks: 208, reputation: 6, dating: 8 },
-  { id: "merc", name: "New Mercedes-Benz / Tesla", cashPrice: 55000, downPayment: 8000, monthlyPayment: 950, termWeeks: 260, reputation: 12, dating: 16 },
-  { id: "exotic", name: "Porsche 911", cashPrice: 130000, downPayment: 20000, monthlyPayment: 2200, termWeeks: 260, reputation: 24, dating: 30, minTitleTrack: "Associate" }
+  { id: "none", name: "No Car (Subway/Uber)", cashPrice: 0, downPayment: 0, monthlyPayment: 0, reputation: 0, dating: 0 },
+  { id: "civic", name: "Used Honda Civic", cashPrice: 8000, downPayment: 1500, monthlyPayment: 180, reputation: 1, dating: 0 },
+  { id: "bmw", name: "Certified Pre-Owned BMW 3-Series", cashPrice: 28000, downPayment: 4000, monthlyPayment: 520, reputation: 6, dating: 8 },
+  { id: "merc", name: "New Mercedes-Benz / Tesla", cashPrice: 55000, downPayment: 8000, monthlyPayment: 950, reputation: 12, dating: 16 },
+  { id: "exotic", name: "Porsche 911", cashPrice: 130000, downPayment: 20000, monthlyPayment: 2200, reputation: 24, dating: 30, minTitleTrack: "Associate" }
 ];
 
 /* ---------------- Interview question bank ---------------- */
@@ -361,7 +361,7 @@ DATA.DATING_BIOS = [
   "Makes a mean cocktail and an even meaner comeback."
 ];
 
-/* ---------------- Random weekly life events ---------------- */
+/* ---------------- Random monthly life events ---------------- */
 
 DATA.LIFE_EVENTS = [
   { text: "Your phone screen cracks. An annoying, unavoidable cost.", cash: -180, stress: 3 },
@@ -378,6 +378,6 @@ DATA.LIFE_EVENTS = [
 
 DATA.STARTING_DEBT = 450000;
 DATA.LOAN_APR = 0.068;
-DATA.LOAN_TERM_WEEKS = 1040; // 20-year amortization schedule
+DATA.LOAN_TERM_MONTHS = 240; // 20-year amortization schedule
 DATA.SAVINGS_APY = 0.045;
 DATA.STARTING_CASH = 900;
