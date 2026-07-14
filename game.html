@@ -134,6 +134,8 @@
   .overlay-close { display: block; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--locked); background: transparent;
     color: var(--muted); font-size: 13px; margin-top: 10px; }
   .net-line { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink); padding: 8px 0; border-bottom: 1px solid var(--divider); }
+  .pp-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink); margin-bottom: 2px; }
+  .overlay-card input[type="range"] { width: 100%; margin: 4px 0 14px; accent-color: var(--stamp); }
   .end-title { color: var(--paper); font-size: 1.5rem; margin: 4px 0 0; }
   .propcard { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
   .propcard p { margin: 0 0 8px; font-size: 13px; color: var(--ink); }
@@ -417,6 +419,9 @@ function formatMoney(usdAmount, country) {
   const cur = CURRENCY[country] || CURRENCY["United States"];
   const local = Math.max(0, usdAmount) * cur.rate;
   return `${cur.symbol}${Math.round(local).toLocaleString()}`;
+}
+function formatSignedMoney(usdAmount, country) {
+  return usdAmount < 0 ? `-${formatMoney(-usdAmount, country)}` : formatMoney(usdAmount, country);
 }
 function netOfTax(amount, country) {
   const rate = TAX_RATE[country] != null ? TAX_RATE[country] : 0.25;
@@ -820,6 +825,7 @@ function newCtx(char) {
     pets: [], cars: [], realEstate: null,
     sportPerformance: 30, schoolPerformance: 15, jobPerformance: 50,
     nationalRank: null, collegeRank: null, trophies: [], marchMadnessRun: null,
+    business: null,
     usedEvents: new Set(),
     logEntries: [],
     log(msg) { this.logEntries.push({ age: this.age, msg }); },
@@ -1335,6 +1341,248 @@ function finishCareerFlow() {
 }
 
 /* ---- part-time job, special careers, pilot ---- */
+/* ============================== BUSINESS ============================== */
+const BUSINESS_TYPES = {
+  vending: { label: "Vending Machine Route", mode: "production", unit: "Snack", icon: "🥤", startCost: 6000, baseCost: 0.5, basePrice: 1.75, flavor: "Stock and collect from vending machines around town." },
+  foodtruck: { label: "Food Truck", mode: "production", unit: "Meal", icon: "🚚", startCost: 22000, baseCost: 3.5, basePrice: 9, flavor: "Serve food from a mobile kitchen." },
+  laundromat: { label: "Laundromat", mode: "production", unit: "Load", icon: "🧺", startCost: 45000, baseCost: 1, basePrice: 4.5, flavor: "Coin-operated laundry machines." },
+  carwash: { label: "Car Wash", mode: "production", unit: "Wash", icon: "🚗", startCost: 55000, baseCost: 1.2, basePrice: 12, flavor: "A full-service car wash." },
+  distillery: { label: "Craft Distillery", mode: "production", unit: "Bottle", icon: "🥃", startCost: 150000, baseCost: 4, basePrice: 11, flavor: "Distill and bottle spirits." },
+  construction: { label: "Construction Company", mode: "contract", icon: "🏗️", startCost: 90000, flavor: "Bid on and complete building projects." },
+};
+const BIZ_PREFIXES = ["Golden Gate", "Silver Creek", "Ironwood", "Blue Ridge", "Copper Hill", "Maple Street", "Pine Valley", "Harbor View", "Union Square", "Redwood", "Stonebridge", "Lakeside"];
+const BIZ_SUFFIXES = { vending: "Vending", foodtruck: "Eats", laundromat: "Laundry", carwash: "Wash Co.", distillery: "Distilling", construction: "Construction" };
+const CONTRACT_NAMES = ["Garage Build", "Office Renovation", "Warehouse Expansion", "Home Addition", "Retail Buildout", "Deck Construction"];
+
+function generateBizName(type) { return `${randChoice(BIZ_PREFIXES)} ${BIZ_SUFFIXES[type]}`; }
+
+function openStartBusinessFlow() {
+  if (ctx.business) return;
+  activeFlow = { type: "startbusiness" };
+  render();
+}
+function startBusiness(type) {
+  const c = ctx;
+  const t = BUSINESS_TYPES[type];
+  if (!t || c.business || c.wealth < t.startCost) return;
+  c.wealth -= t.startCost;
+  c.business = {
+    type, name: generateBizName(type), capital: 0, employees: 1, morale: 70, facilities: 1,
+    price: t.basePrice || 0, quantity: 1000, marketingCost: (t.baseCost || 0) * 0.3, supplierQuality: 60,
+    contractsCompleted: 0, currentContract: null, yearsOwned: 0,
+  };
+  c.log(`Started ${c.business.name}, a new ${t.label.toLowerCase()}, with a ${formatMoney(t.startCost, character.country)} investment.`);
+  activeFlow = null;
+  render();
+}
+
+function bizProductionChance(biz, type) {
+  const demand = 0.5 + (biz.marketingCost / Math.max(1, type.basePrice * 2)) + (biz.supplierQuality - 50) / 200 - (biz.price - type.basePrice) / Math.max(1, type.basePrice * 2) + (biz.morale - 50) / 300;
+  return clamp01(demand);
+}
+function processBusinessYear() {
+  const c = ctx;
+  const biz = c.business;
+  if (!biz) return;
+  const type = BUSINESS_TYPES[biz.type];
+  biz.yearsOwned += 1;
+  if (type.mode === "production") {
+    const capacity = biz.quantity * biz.facilities;
+    const demandFactor = bizProductionChance(biz, type);
+    const unitsSold = Math.round(capacity * demandFactor);
+    const revenue = unitsSold * biz.price;
+    const cogs = unitsSold * type.baseCost;
+    const marketingSpend = biz.marketingCost * capacity * 0.05;
+    const payroll = Math.max(0, biz.employees - 1) * 28000;
+    const profit = Math.round(revenue - cogs - marketingSpend - payroll);
+    biz.capital += profit;
+    c.log(`${biz.name} sold ${unitsSold.toLocaleString()} ${type.unit}s this year, netting ${formatSignedMoney(profit, character.country)} in profit.`);
+  } else {
+    biz.capital -= Math.max(0, biz.employees - 1) * 28000;
+    if (biz.currentContract && age >= biz.currentContract.dueAge) {
+      biz.capital += biz.currentContract.agreedPrice;
+      biz.contractsCompleted += 1;
+      c.log(`${biz.name} completed the ${biz.currentContract.name} contract, earning ${formatMoney(biz.currentContract.agreedPrice, character.country)}.`);
+      biz.currentContract = null;
+    }
+  }
+  biz.morale = clamp100(biz.morale - 3);
+}
+
+function openProductionPlan() {
+  const biz = ctx.business;
+  if (!biz) return;
+  activeFlow = { type: "productionplan", draft: { price: biz.price, quantity: biz.quantity, marketingCost: biz.marketingCost } };
+  render();
+}
+function saveProductionPlan() {
+  const f = activeFlow;
+  const biz = ctx.business;
+  if (!biz || !f || f.type !== "productionplan") return;
+  biz.price = f.draft.price; biz.quantity = f.draft.quantity; biz.marketingCost = f.draft.marketingCost;
+  ctx.log(`Updated the production plan for ${biz.name}.`);
+  activeFlow = null;
+  render();
+}
+
+function openNewSupplier() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const type = BUSINESS_TYPES[biz.type];
+  const found = randInt(30, 90);
+  const cost = 2000;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford to look for a new supplier for ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  if (found > biz.supplierQuality) {
+    biz.supplierQuality = found;
+    ctx.log(`Found a better supplier for ${biz.name} — quality improved.`);
+  } else {
+    ctx.log(`Looked for a new supplier for ${biz.name}, but the current one is still the best option.`);
+  }
+  render();
+}
+
+function openNegotiateContract() {
+  const biz = ctx.business;
+  if (!biz || biz.currentContract) return;
+  const budgetMin = randInt(10, 40) * 1000;
+  const budgetMax = budgetMin + randInt(10, 30) * 1000;
+  const contract = {
+    name: randChoice(CONTRACT_NAMES), budgetMin, budgetMax,
+    deadlineYears: randInt(1, 3), workersNeeded: randInt(2, 6),
+    targetPrice: randInt(budgetMin, budgetMax), round: 1, maxRounds: 5, counter: null,
+  };
+  activeFlow = { type: "negotiate", contract };
+  render();
+}
+function submitOffer(amountStr) {
+  const f = activeFlow;
+  if (!f || f.type !== "negotiate") return;
+  const c = f.contract;
+  const amount = Math.round(Number(amountStr));
+  if (!amount || amount <= 0) return;
+  const tolerance = c.targetPrice * 0.08;
+  if (Math.abs(amount - c.targetPrice) <= tolerance) {
+    c.agreedPrice = Math.round((amount + c.targetPrice) / 2);
+    finalizeContract(c);
+    return;
+  }
+  if (c.round >= c.maxRounds) {
+    ctx.log(`Negotiations for the ${c.name} contract fell through after ${c.maxRounds} rounds.`);
+    activeFlow = null;
+    render();
+    return;
+  }
+  const counterBias = amount > c.targetPrice ? -1 : 1;
+  c.counter = Math.round(c.targetPrice + counterBias * tolerance * 1.5);
+  c.round += 1;
+  render();
+}
+function finalizeContract(c) {
+  ctx.business.currentContract = { name: c.name, agreedPrice: c.agreedPrice, dueAge: age + c.deadlineYears };
+  ctx.log(`Reached a deal on the ${c.name} contract for ${formatMoney(c.agreedPrice, character.country)}, due in ${c.deadlineYears} year(s).`);
+  activeFlow = null;
+  render();
+}
+function walkAwayContract() {
+  ctx.log(`Walked away from negotiations for the ${activeFlow.contract.name} contract.`);
+  activeFlow = null;
+  render();
+}
+
+function hireEmployee() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const cost = 1500;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford to hire another employee at ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  biz.employees += 1;
+  ctx.log(`Hired another employee at ${biz.name}.`);
+  render();
+}
+function fireEmployee() {
+  const biz = ctx.business;
+  if (!biz || biz.employees <= 1) return;
+  biz.employees -= 1;
+  biz.morale = clamp100(biz.morale - 8);
+  ctx.log(`Let an employee go at ${biz.name} — morale took a hit.`);
+  render();
+}
+function giveRaise() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const cost = biz.employees * 1000;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford a raise for the team at ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  biz.morale = clamp100(biz.morale + 10);
+  ctx.log(`Gave the team at ${biz.name} a raise — morale improved.`);
+  render();
+}
+function teamBuilding() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const cost = 1200;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford a team building event at ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  biz.morale = clamp100(biz.morale + 15);
+  ctx.log(`Sponsored a team building activity at ${biz.name} — morale improved.`);
+  render();
+}
+function bizConsultant() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const cost = 3000;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford a consultant for ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  biz.supplierQuality = clamp100(biz.supplierQuality + 5);
+  biz.morale = clamp100(biz.morale + 5);
+  ctx.log(`Brought in a consultant for ${biz.name} — some useful advice on running things.`);
+  render();
+}
+function expandFacilities() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const type = BUSINESS_TYPES[biz.type];
+  const cost = type.startCost * 0.7;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford to expand ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  biz.facilities += 1;
+  ctx.log(`Expanded ${biz.name} — now running ${biz.facilities} locations.`);
+  render();
+}
+function takeBonus() {
+  const biz = ctx.business;
+  if (!biz || biz.capital <= 0) return;
+  const amount = Math.round(biz.capital * 0.5);
+  biz.capital -= amount;
+  ctx.wealth += amount;
+  ctx.happiness = clampStat(ctx.happiness + 2);
+  ctx.log(`Took a ${formatMoney(amount, character.country)} bonus from ${biz.name}.`);
+  render();
+}
+function rebrandBusiness() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const cost = 4000;
+  if (ctx.wealth < cost) { ctx.log(`Couldn't afford to rebrand ${biz.name}.`); render(); return; }
+  ctx.wealth -= cost;
+  const oldName = biz.name;
+  biz.name = generateBizName(biz.type);
+  biz.morale = clamp100(biz.morale + 5);
+  ctx.log(`Rebranded ${oldName} as ${biz.name}.`);
+  render();
+}
+function sellBusiness() {
+  const biz = ctx.business;
+  if (!biz) return;
+  const valuation = Math.round(biz.capital + biz.facilities * 20000 + biz.employees * 5000);
+  ctx.wealth += Math.max(0, valuation);
+  ctx.log(`Sold ${biz.name} for ${formatMoney(Math.max(0, valuation), character.country)}.`);
+  ctx.business = null;
+  screen = "dashboard";
+  render();
+}
+
 const PART_TIME_JOBS = [{ name: "Retail Clerk", pay: 700 }, { name: "Dog Walker", pay: 500 }, { name: "Tutor", pay: 800 }, { name: "Cashier", pay: 650 }, { name: "Lifeguard", pay: 750 }];
 function openPartTimeFlow() { if (ctx.partTimeUsesThisYear >= 2) return; activeFlow = { type: "parttime" }; render(); }
 function choosePartTimeJob(job) {
@@ -1479,6 +1727,7 @@ function doYearAdvance() {
   }
   age = nextAge;
   updateRankings();
+  processBusinessYear();
 
   if (c.higherEdInProgress && age >= c.higherEdGradAge) {
     const p = HIGHER_ED_PROGRAMS[c.higherEdInProgress];
@@ -1665,6 +1914,7 @@ function renderDashboardBody() {
     { key: "shopping", label: "Shopping", sub: `${c.pets.length + c.cars.length + (c.realEstate ? 1 : 0)} owned`, icon: "🛍️" },
     { key: "licenses", label: "Licenses", sub: `${(c.carLicense ? 1 : 0) + (c.pilotStudentLicense ? 1 : 0)}/2`, icon: "🔑" },
   ];
+  if (c.business) tiles.push({ key: "business", label: "Business", sub: c.business.name, icon: BUSINESS_TYPES[c.business.type].icon });
   const recent = [...c.logEntries].reverse().slice(0, 4);
   return `
     <div class="tile-grid">${tiles.map((t) => `
@@ -1677,7 +1927,7 @@ function renderDashboardBody() {
 }
 
 function renderSubPage() {
-  const map = { occupation: pageOccupation, activities: pageActivities, relationships: pageRelationships, assets: pageAssets, shopping: pageShopping, licenses: pageLicenses };
+  const map = { occupation: pageOccupation, activities: pageActivities, relationships: pageRelationships, assets: pageAssets, shopping: pageShopping, licenses: pageLicenses, business: pageBusiness };
   const fn = map[screen];
   return `<div class="back-row"><button class="back-btn" data-action="nav" data-arg="dashboard">← Back to dashboard</button></div>` + (fn ? fn() : "");
 }
@@ -1749,7 +1999,10 @@ function pageOccupation() {
     html += rowHTML("💼", "Unemployed", "No job yet");
     html += rowBtnHTML("💼", "Job Market", "Browse 20 openings", "openJobMarket");
     if (sport) html += rowBtnHTML("📋", sport.early ? `Declare Early for ${sport.sport} Draft` : `Declare for ${sport.sport} Draft`, "Try to go pro", "declareDraft", sport.sport + "|" + (sport.early ? "1" : "0"));
-    html += rowBtnHTML("✈️", "Special Careers", "Pilot, pro sports tryouts", "openSpecialCareers");
+  }
+
+  if (a >= 18) {
+    html += rowBtnHTML("✈️", "Special Careers", "Pilot, pro sports tryouts, start a business", "openSpecialCareers");
   }
 
   if (c.job) {
@@ -1865,6 +2118,46 @@ function pageLicenses() {
   return html;
 }
 
+/* ---- business page ---- */
+function pageBusiness() {
+  const c = ctx;
+  const biz = c.business;
+  if (!biz) return `<p class="page-title">Business</p><p class="flavor" style="font-style:normal;">No business yet — start one from Special Careers on the Occupation page.</p>`;
+  const type = BUSINESS_TYPES[biz.type];
+  let html = `<p class="page-title">${esc(biz.name)}${type.mode === "production" ? ` (${formatMoney(biz.price, character.country)}/${type.unit})` : ""}</p>`;
+
+  if (type.mode === "production") {
+    html += `<div class="section-label">Supplier Quality</div>` + perfBarHTML("Quality", biz.supplierQuality);
+  }
+  html += `<div class="section-label">Employee Morale</div>` + perfBarHTML("Morale", biz.morale);
+
+  html += `<div class="section-label">Activities</div>`;
+  if (type.mode === "production") {
+    html += rowBtnHTML("🔍", "New Supplier", "Look for a new supplier ($2,000)", "openNewSupplier");
+    html += rowBtnHTML("📅", "Production Plan", "Configure price, quantity & marketing", "openProductionPlan");
+  } else {
+    if (biz.currentContract) html += rowHTML("🤝", biz.currentContract.name, `Due age ${biz.currentContract.dueAge} — ${formatMoney(biz.currentContract.agreedPrice, character.country)}`);
+    else html += rowBtnHTML("🤝", "Negotiate Contract", "Find and negotiate a new project", "openNegotiateContract");
+  }
+  html += rowBtnHTML("🎨", "Rebrand", "Rebrand the business ($4,000)", "rebrandBusiness");
+
+  html += `<div class="section-label">Management</div>`;
+  html += rowBtnHTML("🧑‍💻", "Consultant", "Get some expert advice ($3,000)", "bizConsultant");
+  html += rowHTML("👥", "Employees", `${biz.employees} on staff`);
+  html += `<div class="rel-actions" style="margin-bottom:10px;">
+    <button data-action="hireEmployee">Hire ($1,500)</button>
+    <button data-action="fireEmployee" ${biz.employees <= 1 ? "disabled" : ""}>Let Go</button>
+    <button data-action="giveRaise">Give Raise</button>
+    <button data-action="teamBuilding">Team Building</button>
+  </div>`;
+  html += rowHTML("🏭", "Facilities", `${biz.facilities} location${biz.facilities > 1 ? "s" : ""}`);
+  html += rowBtnHTML("🏗️", "Expand Facilities", `${formatMoney(Math.round(type.startCost * 0.7), character.country)}`, "expandFacilities");
+  html += rowHTML("📊", "Balance Sheet", `Available Capital: ${formatSignedMoney(biz.capital, character.country)}`);
+  html += rowBtnHTML("🤑", "Bonus", biz.capital > 0 ? `Take a bonus (${formatMoney(Math.round(biz.capital * 0.5), character.country)})` : "No capital available", "takeBonus", null, biz.capital <= 0);
+  html += rowBtnHTML("💰", "Sell Business", `Estimated value: ${formatMoney(Math.round(biz.capital + biz.facilities * 20000 + biz.employees * 5000), character.country)}`, "sellBusiness");
+  return html;
+}
+
 /* ============================== FLOW OVERLAY ============================== */
 function overlayShell(eyebrow, bodyHTML, closeAction) {
   return `<div class="overlay" id="flowOverlay"><div class="overlay-card">
@@ -1952,8 +2245,55 @@ function renderFlowOverlay() {
   } else if (f.type === "parttime") {
     html = overlayShell("Part-Time Job", `<p class="overlay-text">Which part-time job will ${esc(c.first)} take?</p>` + PART_TIME_JOBS.map((j, i) => choiceBtn("choosePartTime", i, `${j.name} — ${formatMoney(j.pay, character.country)}`)).join(""));
   } else if (f.type === "specialcareers") {
-    html = overlayShell("Special Careers", `<p class="overlay-text">Which special career will ${esc(c.first)} pursue?</p>` +
-      choiceBtn("goToPilot", "", "✈️ Airline Pilot") + choiceBtn("goToSportsRequest", "", "🏆 Pro Sports Tryout Request"), "closeFlow");
+    let scBody = `<p class="overlay-text">Which special career will ${esc(c.first)} pursue?</p>`;
+    if (!c.job) {
+      scBody += choiceBtn("goToPilot", "", "✈️ Airline Pilot") + choiceBtn("goToSportsRequest", "", "🏆 Pro Sports Tryout Request");
+    } else {
+      scBody += `<p class="flavor" style="font-style:normal;">Quit your job to pursue piloting or pro sports.</p>`;
+    }
+    scBody += c.business
+      ? rowHTML("🏢", "Business", `Already running ${c.business.name}`)
+      : rowBtnHTML("🏢", "Start a Business", "Vending, food truck, construction, and more", "goToStartBusiness");
+    html = overlayShell("Special Careers", scBody, "closeFlow");
+  } else if (f.type === "startbusiness") {
+    const rows = Object.keys(BUSINESS_TYPES).map((key) => {
+      const t = BUSINESS_TYPES[key];
+      const afford = c.wealth >= t.startCost;
+      return rowBtnHTML(t.icon, t.label, `${afford ? "" : "🔒 "}${formatMoney(t.startCost, character.country)} — ${t.flavor}`, "startBusiness", key, !afford);
+    }).join("");
+    html = overlayShell("Start a Business", `<p class="overlay-text">Which business will ${esc(c.first)} start?</p>${rows}`, "closeFlow");
+  } else if (f.type === "productionplan") {
+    const type = BUSINESS_TYPES[c.business.type];
+    const d = f.draft;
+    const unitCost = type.baseCost;
+    const totalCost = Math.round(d.quantity * c.business.facilities * unitCost + d.marketingCost * d.quantity * c.business.facilities * 0.05);
+    html = overlayShell("Production Plan", `
+      <p class="overlay-text">Edit your production plan for ${esc(c.business.name)}.</p>
+      <div class="pp-row"><span>📌 Fixed Cost/unit</span><span id="ppCostVal">${formatMoney(unitCost, character.country)}</span></div>
+      <div class="pp-row"><span>📸 Marketing Cost</span><span id="ppMarketingVal">${d.marketingCost.toFixed(2)}</span></div>
+      <input type="range" id="ppMarketing" min="0" max="${(type.basePrice * 0.6).toFixed(2)}" step="0.05" value="${d.marketingCost}">
+      <div class="pp-row"><span>💲 Unit Price</span><span id="ppPriceVal">${formatMoney(d.price, character.country)}</span></div>
+      <input type="range" id="ppPrice" min="${(type.basePrice * 0.5).toFixed(2)}" max="${(type.basePrice * 2).toFixed(2)}" step="0.05" value="${d.price}">
+      <div class="pp-row"><span>📦 Quantity</span><span id="ppQuantityVal">${d.quantity.toLocaleString()} ${type.unit}s</span></div>
+      <input type="range" id="ppQuantity" min="200" max="20000" step="100" value="${d.quantity}">
+      <div class="net-line"><span>Total Cost</span><span id="ppTotalCost">${formatMoney(totalCost, character.country)}</span></div>
+      <div class="net-line"><span>Available Capital</span><span>${formatMoney(c.business.capital, character.country)}</span></div>
+      <button class="btn-primary" style="margin-top:12px;" data-action="saveProductionPlan">Save</button>
+    `, "closeFlow");
+  } else if (f.type === "negotiate") {
+    const n = f.contract;
+    let body = `
+      <div class="net-line"><span>🏠 ${esc(n.name)}</span><span>Round ${n.round}/${n.maxRounds}</span></div>
+      <p class="flavor" style="font-style:normal;">Budget: ${formatMoney(n.budgetMin, character.country)} – ${formatMoney(n.budgetMax, character.country)} · ${n.deadlineYears}yr deadline · ${n.workersNeeded}+ workers</p>
+    `;
+    if (n.counter != null) body += `<p class="overlay-text">The client counters at <strong>${formatMoney(n.counter, character.country)}</strong>.</p>`;
+    body += `
+      <label class="field-label">Your offer ($)</label>
+      <input type="text" inputmode="numeric" class="text-input" id="offerInput" placeholder="e.g. 26000">
+      <button class="btn-primary" style="margin-top:10px;" data-action="submitOffer">Make Offer</button>
+      <button class="overlay-close" data-action="walkAwayContract">👋 Walk Away</button>
+    `;
+    html = overlayShell("🤝 Negotiate Contract", body);
   } else if (f.type === "pilot") {
     let body = `<p class="overlay-text">✈️ Pilot Career</p>`;
     if (!c.pilotStudentLicense) body += `<p class="overlay-text">You'll need a Student Pilot License first — get one from Licenses (age 16+).</p>`;
@@ -2059,6 +2399,28 @@ function render() {
   else renderGameShell();
   renderFlowOverlay();
   wireCreateInputs();
+  wireOverlayInputs();
+}
+
+function wireOverlayInputs() {
+  if (!activeFlow) return;
+  if (activeFlow.type === "productionplan") {
+    const type = BUSINESS_TYPES[ctx.business.type];
+    const priceEl = document.getElementById("ppPrice");
+    const marketingEl = document.getElementById("ppMarketing");
+    const quantityEl = document.getElementById("ppQuantity");
+    const refresh = () => {
+      const d = activeFlow.draft;
+      document.getElementById("ppPriceVal").textContent = formatMoney(d.price, character.country);
+      document.getElementById("ppMarketingVal").textContent = d.marketingCost.toFixed(2);
+      document.getElementById("ppQuantityVal").textContent = `${Math.round(d.quantity).toLocaleString()} ${type.unit}s`;
+      const totalCost = Math.round(d.quantity * ctx.business.facilities * type.baseCost + d.marketingCost * d.quantity * ctx.business.facilities * 0.05);
+      document.getElementById("ppTotalCost").textContent = formatMoney(totalCost, character.country);
+    };
+    if (priceEl) priceEl.addEventListener("input", (e) => { activeFlow.draft.price = Number(e.target.value); refresh(); });
+    if (marketingEl) marketingEl.addEventListener("input", (e) => { activeFlow.draft.marketingCost = Number(e.target.value); refresh(); });
+    if (quantityEl) quantityEl.addEventListener("input", (e) => { activeFlow.draft.quantity = Number(e.target.value); refresh(); });
+  }
 }
 
 function wireCreateInputs() {
@@ -2150,11 +2512,29 @@ const ACTIONS = {
   openSpecialCareers: () => openSpecialCareers(),
   goToPilot: () => openPilotFlow(),
   goToSportsRequest: () => openSportsRequest(),
+  goToStartBusiness: () => openStartBusinessFlow(),
   takeFlightLesson: () => takeFlightLesson(),
   enrollLicense: (arg) => enrollLicense(PILOT_LICENSES[Number(arg)]),
   applyToAirline: (arg) => applyToAirline(AIRLINES.find((a) => a.name === arg)),
   getCarLicense: () => getCarLicense(),
   getPilotStudentLicense: () => getPilotStudentLicense(),
+
+  startBusiness: (arg) => startBusiness(arg),
+  openProductionPlan: () => openProductionPlan(),
+  saveProductionPlan: () => saveProductionPlan(),
+  openNewSupplier: () => openNewSupplier(),
+  openNegotiateContract: () => openNegotiateContract(),
+  submitOffer: () => { const el = document.getElementById("offerInput"); submitOffer(el ? el.value : ""); },
+  walkAwayContract: () => walkAwayContract(),
+  hireEmployee: () => hireEmployee(),
+  fireEmployee: () => fireEmployee(),
+  giveRaise: () => giveRaise(),
+  teamBuilding: () => teamBuilding(),
+  bizConsultant: () => bizConsultant(),
+  expandFacilities: () => expandFacilities(),
+  takeBonus: () => takeBonus(),
+  rebrandBusiness: () => rebrandBusiness(),
+  sellBusiness: () => sellBusiness(),
 
   openHousing: () => openHousingFlow(),
   chooseHousing: (arg) => chooseHousing(HOUSING_OPTIONS[Number(arg)]),
