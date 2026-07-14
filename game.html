@@ -157,12 +157,6 @@ const randChoice = (arr) => arr[randInt(0, arr.length - 1)];
 const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
 /* ============================== DATA ============================== */
-const JOBS = [
-  "Finance Analyst", "Accountant", "Corporate Lawyer", "Software Engineer", "Architect",
-  "Physician", "Nurse", "Gallery Artist", "Hotel Manager", "Civil Servant",
-  "Research Scientist", "Teacher", "Chef", "Journalist",
-  "Psychologist", "Farmer", "Translator", "Political Aide", "Musician",
-];
 
 const DEGREES = [
   "Accounting", "Agriculture", "Architecture", "Art", "Biology", "Business",
@@ -173,21 +167,35 @@ const DEGREES = [
 ];
 
 const DEGREE_QUALIFIES = {
-  "Accounting": ["Accountant"], "Agriculture": ["Farmer"], "Architecture": ["Architect"],
-  "Art": ["Gallery Artist"], "Biology": ["Physician", "Research Scientist", "Nurse"],
-  "Business": ["Finance Analyst", "Hotel Manager", "Accountant"],
-  "Communications": ["Journalist", "Political Aide"], "Computer Science": ["Software Engineer"],
-  "Economics": ["Finance Analyst", "Political Aide"], "Education": ["Teacher"],
-  "Engineering": ["Architect", "Software Engineer", "Research Scientist"],
-  "Environmental Science": ["Research Scientist", "Farmer"], "Finance": ["Finance Analyst"],
-  "Fine Arts": ["Gallery Artist", "Musician"], "Health Sciences": ["Physician", "Nurse"],
-  "History": ["Teacher", "Civil Servant"], "Hospitality": ["Hotel Manager", "Chef"],
-  "Information Technology": ["Software Engineer"], "Journalism": ["Journalist"],
-  "Law": ["Corporate Lawyer", "Civil Servant"], "Linguistics": ["Translator", "Teacher"],
-  "Mathematics": ["Finance Analyst", "Research Scientist"], "Music": ["Musician"], "Nursing": ["Nurse"],
-  "Philosophy": ["Civil Servant", "Teacher"], "Physics": ["Research Scientist"],
-  "Political Science": ["Civil Servant", "Political Aide"], "Psychology": ["Psychologist"],
-  "Science": ["Research Scientist"],
+  "Accounting": ["Accountant", "Auditor"],
+  "Agriculture": ["Farmer", "Environmental Consultant", "Agricultural Scientist"],
+  "Architecture": ["Architect", "Civil Engineer", "Urban Planner", "Interior Designer"],
+  "Art": ["Gallery Artist", "Art Director", "Interior Designer"],
+  "Biology": ["Physician", "Research Scientist", "Nurse", "Lab Scientist"],
+  "Business": ["Finance Analyst", "Hotel Manager", "Accountant", "HR Manager", "Actuary"],
+  "Communications": ["Journalist", "Political Aide", "Copywriter", "Diplomat"],
+  "Computer Science": ["Software Engineer", "Data Scientist", "IT Consultant"],
+  "Economics": ["Finance Analyst", "Political Aide", "Actuary"],
+  "Education": ["Teacher", "Music Teacher", "School Counselor"],
+  "Engineering": ["Architect", "Software Engineer", "Research Scientist", "Civil Engineer", "Data Scientist"],
+  "Environmental Science": ["Research Scientist", "Farmer", "Environmental Consultant", "Agricultural Scientist", "Urban Planner"],
+  "Finance": ["Finance Analyst", "Actuary", "Accountant"],
+  "Fine Arts": ["Gallery Artist", "Musician", "Art Director", "Music Teacher"],
+  "Health Sciences": ["Physician", "Nurse", "Lab Scientist"],
+  "History": ["Teacher", "Civil Servant", "Diplomat"],
+  "Hospitality": ["Hotel Manager", "Chef", "HR Manager"],
+  "Information Technology": ["Software Engineer", "Data Scientist", "IT Consultant"],
+  "Journalism": ["Journalist", "Copywriter"],
+  "Law": ["Corporate Lawyer", "Civil Servant", "Diplomat"],
+  "Linguistics": ["Translator", "Teacher", "Diplomat", "Copywriter"],
+  "Mathematics": ["Finance Analyst", "Research Scientist", "Actuary", "Data Scientist"],
+  "Music": ["Musician", "Music Teacher", "Sound Engineer"],
+  "Nursing": ["Nurse", "Lab Scientist"],
+  "Philosophy": ["Civil Servant", "Teacher", "Diplomat"],
+  "Physics": ["Research Scientist", "Data Scientist", "Lab Scientist"],
+  "Political Science": ["Civil Servant", "Political Aide", "Diplomat", "Urban Planner"],
+  "Psychology": ["Psychologist", "School Counselor", "HR Manager"],
+  "Science": ["Research Scientist", "Lab Scientist", "Data Scientist", "Environmental Consultant", "Agricultural Scientist"],
 };
 
 const JOB_TRACKS = {
@@ -219,6 +227,23 @@ const JOB_TRACKS = {
   "Veterinarian": [{ title: "Associate Veterinarian", salary: 75000 }, { title: "Veterinarian", salary: 100000 }, { title: "Senior Veterinarian", salary: 135000 }],
   "Dentist": [{ title: "Associate Dentist", salary: 90000 }, { title: "Dentist", salary: 160000 }, { title: "Practice Owner Dentist", salary: 220000 }],
   "Pharmacist": [{ title: "Staff Pharmacist", salary: 95000 }, { title: "Pharmacist", salary: 120000 }, { title: "Pharmacy Manager", salary: 145000 }],
+  "Auditor": [{ title: "Junior Auditor", salary: 48000 }, { title: "Auditor", salary: 68000 }, { title: "Senior Auditor", salary: 95000 }],
+  "Environmental Consultant": [{ title: "Junior Environmental Consultant", salary: 42000 }, { title: "Environmental Consultant", salary: 62000 }, { title: "Senior Environmental Consultant", salary: 88000 }],
+  "Agricultural Scientist": [{ title: "Agricultural Technician", salary: 36000 }, { title: "Agricultural Scientist", salary: 58000 }, { title: "Senior Agricultural Scientist", salary: 82000 }],
+  "Civil Engineer": [{ title: "Junior Civil Engineer", salary: 58000 }, { title: "Civil Engineer", salary: 80000 }, { title: "Senior Civil Engineer", salary: 110000 }],
+  "Urban Planner": [{ title: "Junior Urban Planner", salary: 48000 }, { title: "Urban Planner", salary: 68000 }, { title: "Senior Urban Planner", salary: 92000 }],
+  "Interior Designer": [{ title: "Junior Interior Designer", salary: 38000 }, { title: "Interior Designer", salary: 55000 }, { title: "Senior Interior Designer", salary: 80000 }],
+  "Art Director": [{ title: "Junior Designer", salary: 35000 }, { title: "Art Director", salary: 58000 }, { title: "Creative Director", salary: 92000 }],
+  "Lab Scientist": [{ title: "Lab Technician", salary: 38000 }, { title: "Lab Scientist", salary: 55000 }, { title: "Lab Director", salary: 85000 }],
+  "Data Scientist": [{ title: "Junior Data Analyst", salary: 70000 }, { title: "Data Scientist", salary: 100000 }, { title: "Senior Data Scientist", salary: 140000 }],
+  "IT Consultant": [{ title: "IT Support Specialist", salary: 50000 }, { title: "IT Consultant", salary: 80000 }, { title: "Senior IT Consultant", salary: 115000 }],
+  "Actuary": [{ title: "Actuarial Analyst", salary: 65000 }, { title: "Actuary", salary: 95000 }, { title: "Senior Actuary", salary: 140000 }],
+  "Music Teacher": [{ title: "Music Instructor", salary: 32000 }, { title: "Music Teacher", salary: 46000 }, { title: "Senior Music Teacher", salary: 60000 }],
+  "Sound Engineer": [{ title: "Assistant Sound Engineer", salary: 30000 }, { title: "Sound Engineer", salary: 48000 }, { title: "Senior Sound Engineer", salary: 68000 }],
+  "School Counselor": [{ title: "School Counselor Assistant", salary: 34000 }, { title: "School Counselor", salary: 52000 }, { title: "Senior School Counselor", salary: 70000 }],
+  "HR Manager": [{ title: "HR Coordinator", salary: 40000 }, { title: "HR Manager", salary: 65000 }, { title: "Senior HR Manager", salary: 95000 }],
+  "Copywriter": [{ title: "Junior Copywriter", salary: 34000 }, { title: "Copywriter", salary: 50000 }, { title: "Senior Copywriter", salary: 72000 }],
+  "Diplomat": [{ title: "Foreign Service Officer", salary: 48000 }, { title: "Diplomat", salary: 78000 }, { title: "Senior Diplomat", salary: 115000 }],
 };
 const NO_DEGREE_JOBS = ["Retail Associate", "Warehouse Worker", "Delivery Driver", "Construction Worker", "Customer Service Rep", "Security Guard"];
 
