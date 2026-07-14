@@ -709,20 +709,38 @@ function jobRequiresHigherEd(job, ctx) {
   const required = HIGHER_ED_REQUIRED_JOBS[job];
   return required && ctx.higherEd !== required;
 }
+const JOB_MARKET_COMPANIES = [
+  "Meridian Capital", "Sterling & Co.", "Horizon Group", "Vantage Partners", "Crestview Advisors",
+  "Anchor Industries", "Blackwood Associates", "Silverline Holdings", "Bridgeway Partners", "Northgate Corp",
+  "Fieldstone Group", "Ashford & Reed", "Lumen Partners", "Cobalt Ventures", "Ridgeline Co.",
+  "Ironwood Group", "Pinnacle Partners", "Harborview Industries", "Delacroix & Sons", "Windermere Holdings",
+];
+
 function buildJobMarket(ctx) {
   const eligible = ctx.degree && DEGREE_QUALIFIES[ctx.degree] ? DEGREE_QUALIFIES[ctx.degree] : null;
   let pool = eligible || NO_DEGREE_JOBS;
   pool = pool.filter((j) => !jobRequiresHigherEd(j, ctx));
   if (!pool.length) pool = NO_DEGREE_JOBS;
   const postings = [];
+  const usedCombos = new Set();
+  const pickCompany = (jobBase, tier) => {
+    let company, key, attempts = 0;
+    do {
+      company = randChoice(JOB_MARKET_COMPANIES);
+      key = `${jobBase}|${tier}|${company}`;
+      attempts++;
+    } while (usedCombos.has(key) && attempts < 10);
+    usedCombos.add(key);
+    return company;
+  };
   const cycle = (arr) => { const out = []; while (out.length < 20) out.push(...[...arr].sort(() => Math.random() - 0.5)); return out; };
   const primary = cycle(pool);
   let i = 0;
-  while (postings.length < 16 && i < primary.length) { postings.push({ jobBase: primary[i], tier: 0, offTrack: false }); i++; }
+  while (postings.length < 16 && i < primary.length) { postings.push({ jobBase: primary[i], tier: 0, offTrack: false, company: pickCompany(primary[i], 0) }); i++; }
   if (ctx.smarts >= 7) {
-    pool.forEach((j) => { const track = JOB_TRACKS[j]; if (track && track.length > 1 && postings.length < 20 && !tierBlockedByHigherEd(j, 1, ctx)) postings.push({ jobBase: j, tier: 1, offTrack: false }); });
+    pool.forEach((j) => { const track = JOB_TRACKS[j]; if (track && track.length > 1 && postings.length < 20 && !tierBlockedByHigherEd(j, 1, ctx)) postings.push({ jobBase: j, tier: 1, offTrack: false, company: pickCompany(j, 1) }); });
   }
-  while (postings.length < 20) postings.push({ jobBase: primary[postings.length % primary.length], tier: 0, offTrack: false });
+  while (postings.length < 20) { const jb = primary[postings.length % primary.length]; postings.push({ jobBase: jb, tier: 0, offTrack: false, company: pickCompany(jb, 0) }); }
   return postings.slice(0, 20);
 }
 
@@ -764,7 +782,7 @@ function newCtx(char) {
     curriculum: char.curriculum, talent: char.talent,
     health: char.stats.health, look: char.stats.look, smarts: char.stats.smarts, happiness: char.stats.happiness,
     wealth: char.wealth, path: null, job: null, jobBase: null, jobTier: 0,
-    degree: null, uniType: null, salary: 0, retired: false, relationship: "Single",
+    degree: null, uniType: null, salary: 0, employer: null, retired: false, relationship: "Single",
     gradeRaw: clamp100(50 + (char.stats.smarts - 5) * 7),
     athleticism: clampStat(char.talent === "sports" ? 8 : Math.round(3 + char.stats.health * 0.5)),
     madeTeam: null, month: 0, housing: null, schoolType: "public",
@@ -1032,7 +1050,7 @@ function quitJob() {
   const c = ctx;
   if (!c.job) return;
   c.log(`Quit your job as a ${c.job}.`);
-  c.job = null; c.jobBase = null; c.jobTier = 0; c.salary = 0; c.jobPerformance = 50;
+  c.job = null; c.jobBase = null; c.jobTier = 0; c.salary = 0; c.employer = null; c.jobPerformance = 50;
   c.proSport = null; c.proTeam = null; c.proPosition = null; c.proSeasonNumber = 0;
   render();
 }
@@ -1279,13 +1297,13 @@ function finishCareerFlow() {
   const c = ctx; const f = activeFlow;
   if (f.passed) {
     const track = JOB_TRACKS[f.posting.jobBase] || [{ title: f.posting.jobBase, salary: f.salary }];
-    c.jobBase = f.posting.jobBase; c.jobTier = f.posting.tier; c.job = track[f.posting.tier].title; c.salary = f.salary; c.jobPerformance = 50;
+    c.jobBase = f.posting.jobBase; c.jobTier = f.posting.tier; c.job = track[f.posting.tier].title; c.employer = f.posting.company; c.salary = f.salary; c.jobPerformance = 50;
     const net = netOfTax(f.salary, c.country);
-    c.log(`Passed the interview and started as a ${c.job}, earning ${formatMoney(f.salary, c.country)}/yr (about ${formatMoney(net, c.country)} after tax).`);
+    c.log(`Passed the interview and started as a ${c.job} at ${c.employer}, earning ${formatMoney(f.salary, c.country)}/yr (about ${formatMoney(net, c.country)} after tax).`);
   } else {
     const track = JOB_TRACKS[f.posting.jobBase];
     const title = track ? track[f.posting.tier].title : f.posting.jobBase;
-    c.log(`Interviewed for ${title} but didn't get the offer.`);
+    c.log(`Interviewed for ${title} at ${f.posting.company} but didn't get the offer.`);
   }
   activeFlow = null;
   render();
@@ -1710,7 +1728,7 @@ function pageOccupation() {
   }
 
   if (c.job) {
-    html += rowHTML("💼", c.job, `${formatMoney(c.salary, character.country)}/yr (${formatMoney(netOfTax(c.salary, character.country), character.country)} after tax)`);
+    html += rowHTML("💼", c.job, `${c.employer ? c.employer + " · " : ""}${formatMoney(c.salary, character.country)}/yr (${formatMoney(netOfTax(c.salary, character.country), character.country)} after tax)`);
     if (c.proSport) {
       html += rowHTML("🎽", "Team", `${c.proTeam} · ${c.proPosition}`);
       html += rowHTML("📅", "Seasons Played", `${c.proSeasonNumber}`);
@@ -1896,7 +1914,7 @@ function renderFlowOverlay() {
   } else if (f.type === "career") {
     if (f.step === "select-job") {
       html = overlayShell("Job Market", `<p class="overlay-text">${c.degree ? `With a degree in ${esc(c.degree)}, which posting will ${esc(c.first)} apply for?` : `Which posting will ${esc(c.first)} apply for?`}</p>` +
-        f.postings.map((p, i) => { const track = JOB_TRACKS[p.jobBase]; const title = track[p.tier].title; return choiceBtn("chooseJobForFlow", i, title + (p.tier >= 1 ? " · Senior (harder)" : "")); }).join(""));
+        f.postings.map((p, i) => { const track = JOB_TRACKS[p.jobBase]; const title = track[p.tier].title; return choiceBtn("chooseJobForFlow", i, `${title} · ${esc(p.company)}` + (p.tier >= 1 ? " · Senior (harder)" : "")); }).join(""));
     } else if (f.step === "round1") {
       html = overlayShell("Interview · Round 1 of 2", `<p class="overlay-text">${esc(f.q1.q)}</p>` + f.q1.options.map((o, i) => choiceBtn("answerRound1", i, o.label)).join(""));
     } else if (f.step === "round2a") {
