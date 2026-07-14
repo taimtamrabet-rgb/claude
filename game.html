@@ -1049,15 +1049,24 @@ function requestPromotion() {
   if (!c.job || c.promotionUsesThisYear >= 1) return;
   c.promotionUsesThisYear = 1;
   const track = getTrack(c.jobBase);
-  if (!track || c.jobTier >= track.length - 1) { c.log("Already at the top of this career track."); render(); return; }
+  if (!track || c.jobTier >= track.length - 1) {
+    const msg = "Already at the top of this career track.";
+    c.log(msg);
+    activeFlow = { type: "promotionresult", message: msg };
+    render();
+    return;
+  }
   const nextTier = c.jobTier + 1;
   if (tierBlockedByHigherEd(c.jobBase, nextTier, c)) {
     const req = JOB_TIER_HIGHER_ED[c.jobBase][nextTier];
-    c.log(`Asked about moving up to ${track[nextTier].title}, but that role requires ${HIGHER_ED_PROGRAMS[req].label} first.`);
+    const msg = `Asked about moving up to ${track[nextTier].title}, but that role requires ${HIGHER_ED_PROGRAMS[req].label} first.`;
+    c.log(msg);
+    activeFlow = { type: "promotionresult", message: msg };
     render();
     return;
   }
   const chance = clamp01(0.3 + (c.jobPerformance - 50) / 130 + (c.smarts - 5) * 0.03);
+  let msg;
   if (Math.random() < chance) {
     c.jobTier = nextTier;
     const cityInfo = COUNTRIES[character.country].cities[character.city];
@@ -1068,12 +1077,14 @@ function requestPromotion() {
     c.job = track[nextTier].title;
     c.happiness += 2;
     c.jobPerformance = clamp100(c.jobPerformance - 10);
-    c.log(`Promoted to ${c.job}! New salary: ${formatMoney(c.salary, character.country)}/yr.`);
+    msg = `🎉 Promoted to ${c.job}! New salary: ${formatMoney(c.salary, character.country)}/yr.`;
   } else {
     c.happiness -= 2;
-    c.log("Asked for a promotion but didn't get it this time.");
+    msg = "You asked for a promotion but didn't get it this time.";
   }
+  c.log(msg);
   syncStats();
+  activeFlow = { type: "promotionresult", message: msg };
   render();
 }
 
@@ -1373,6 +1384,7 @@ function startBusiness(type) {
   };
   c.log(`Started ${c.business.name}, a new ${t.label.toLowerCase()}, with a ${formatMoney(t.startCost, character.country)} investment.`);
   activeFlow = null;
+  screen = "business";
   render();
 }
 
@@ -2194,14 +2206,14 @@ function renderFlowOverlay() {
     body += choiceBtn("chooseFunding", "loan", `Take a student loan (${formatMoney(c.uniType === "ivy" ? 45000 : 15000, character.country)})`);
     html = overlayShell("College", body);
   } else if (f.type === "subject") {
-    if (f.step === "pick") html = overlayShell("Study", `<p class="overlay-text">Which lesson will ${esc(c.first)} study harder for?</p><div class="chip-wrap">${SUBJECTS.map((s) => `<button class="btn-chip" data-action="pickSubject" data-arg="${esc(s)}">${esc(s)}</button>`).join("")}</div>`);
-    else html = overlayShell(f.subject + " pop quiz", `<p class="overlay-text">${esc(f.question.q)}</p>` + f.question.options.map((o, i) => choiceBtn("answerSubject", i, o.label)).join(""));
+    if (f.step === "pick") html = overlayShell("Study", `<p class="overlay-text">Which lesson will ${esc(c.first)} study harder for?</p><div class="chip-wrap">${SUBJECTS.map((s) => `<button class="btn-chip" data-action="pickSubject" data-arg="${esc(s)}">${esc(s)}</button>`).join("")}</div>`, "closeFlow");
+    else html = overlayShell(f.subject + " pop quiz", `<p class="overlay-text">${esc(f.question.q)}</p>` + f.question.options.map((o, i) => choiceBtn("answerSubject", i, o.label)).join(""), "closeFlow");
   } else if (f.type === "tryout") {
     if (f.step === "pick") {
       const autoIn = c.talent === "sports" && age < 18;
       html = overlayShell("Tryouts", `<p class="overlay-text">Which team will ${esc(c.first)} try out for?</p>${autoIn ? `<p class="flavor" style="font-style:normal;">Your sports talent means you'll make the team automatically.</p>` : ""}<div class="chip-wrap">${sportsForCountry(character.country).map((s) =>
         `<button class="btn-chip" data-action="chooseSport" data-arg="${esc(s)}">${esc(s)}</button>`
-      ).join("")}</div>`);
+      ).join("")}</div>`, "closeFlow");
     } else {
       html = overlayShell("Tryouts", `<p class="overlay-text">${f.passed ? (f.autoIn ? `Your talent got you straight onto the ${esc(f.sport)} team!` : `Made the ${esc(f.sport)} team!`) : `Didn't make the ${esc(f.sport)} team this time.`}</p><button class="btn-primary" data-action="finishTryout">Continue</button>`);
     }
@@ -2232,7 +2244,7 @@ function renderFlowOverlay() {
   } else if (f.type === "career") {
     if (f.step === "select-job") {
       html = overlayShell("Job Market", `<p class="overlay-text">${c.degree ? `With a degree in ${esc(c.degree)}, which posting will ${esc(c.first)} apply for?` : `Which posting will ${esc(c.first)} apply for?`}</p>` +
-        f.postings.map((p, i) => { const track = JOB_TRACKS[p.jobBase]; const title = track[p.tier].title; return choiceBtn("chooseJobForFlow", i, `${title} · ${esc(p.company)}` + (p.tier >= 1 ? " · Senior (harder)" : "")); }).join(""));
+        f.postings.map((p, i) => { const track = JOB_TRACKS[p.jobBase]; const title = track[p.tier].title; return choiceBtn("chooseJobForFlow", i, `${title} · ${esc(p.company)}` + (p.tier >= 1 ? " · Senior (harder)" : "")); }).join(""), "closeFlow");
     } else if (f.step === "round1") {
       html = overlayShell("Interview · Round 1 of 2", `<p class="overlay-text">${esc(f.q1.q)}</p>` + f.q1.options.map((o, i) => choiceBtn("answerRound1", i, o.label)).join(""));
     } else if (f.step === "round2a") {
@@ -2332,10 +2344,10 @@ function renderFlowOverlay() {
     }).join("");
     html = overlayShell("Transfer School", `<p class="overlay-text">Where will ${esc(c.first)} go to school?</p>${rows}`, "closeFlow");
   } else if (f.type === "housing") {
-    html = overlayShell("Housing", `<p class="overlay-text">Where will ${esc(c.first)} live?</p>` + HOUSING_OPTIONS.map((o, i) => choiceBtn("chooseHousing", i, `${o.label} — ${formatMoney(o.monthly, character.country)}/mo`)).join(""));
+    html = overlayShell("Housing", `<p class="overlay-text">Where will ${esc(c.first)} live?</p>` + HOUSING_OPTIONS.map((o, i) => choiceBtn("chooseHousing", i, `${o.label} — ${formatMoney(o.monthly, character.country)}/mo`)).join(""), "closeFlow");
   } else if (f.type === "migrate") {
-    if (f.step === "country") html = overlayShell("Migrate", `<p class="overlay-text">Where will ${esc(c.first)} migrate to?</p><div class="chip-wrap">${Object.keys(COUNTRIES).map((ctry) => `<button class="btn-chip" data-action="pickMigrateCountry" data-arg="${esc(ctry)}">${esc(ctry)}</button>`).join("")}</div>`);
-    else html = overlayShell("Migrate", `<p class="overlay-text">Which city in ${esc(f.country)}?</p><div class="chip-wrap">${Object.keys(COUNTRIES[f.country].cities).map((ct) => `<button class="btn-chip" data-action="pickMigrateCity" data-arg="${esc(ct)}">${esc(ct)}</button>`).join("")}</div>`);
+    if (f.step === "country") html = overlayShell("Migrate", `<p class="overlay-text">Where will ${esc(c.first)} migrate to?</p><div class="chip-wrap">${Object.keys(COUNTRIES).map((ctry) => `<button class="btn-chip" data-action="pickMigrateCountry" data-arg="${esc(ctry)}">${esc(ctry)}</button>`).join("")}</div>`, "closeFlow");
+    else html = overlayShell("Migrate", `<p class="overlay-text">Which city in ${esc(f.country)}?</p><div class="chip-wrap">${Object.keys(COUNTRIES[f.country].cities).map((ct) => `<button class="btn-chip" data-action="pickMigrateCity" data-arg="${esc(ct)}">${esc(ct)}</button>`).join("")}</div>`, "closeFlow");
   } else if (f.type === "seasonrecap") {
     const r = f.record;
     let body = `<p class="overlay-text" style="text-align:center;font-weight:700;">🏆 Season ${f.season}</p>
@@ -2365,7 +2377,9 @@ function renderFlowOverlay() {
   } else if (f.type === "dating") {
     html = overlayShell("Dating", `<p class="overlay-text">How will ${esc(c.first)} meet someone?</p>` +
       choiceBtn("goOnDate", "0", "Meet someone the old-fashioned way (free)") +
-      (age >= 18 ? choiceBtn("goOnDate", "1", `Use a dating app with filters — ${formatMoney(50, character.country)}`) : `<p class="flavor">Dating apps unlock at age 18.</p>`));
+      (age >= 18 ? choiceBtn("goOnDate", "1", `Use a dating app with filters — ${formatMoney(50, character.country)}`) : `<p class="flavor">Dating apps unlock at age 18.</p>`), "closeFlow");
+  } else if (f.type === "promotionresult") {
+    html = overlayShell("Promotion", `<p class="overlay-text">${esc(f.message)}</p><button class="btn-primary" data-action="closeFlow">Continue</button>`);
   }
 
   document.body.insertAdjacentHTML("beforeend", html);
