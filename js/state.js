@@ -87,9 +87,14 @@ function freshStateDefaults() {
 
     car: { id: "none", balance: 0, missedPayments: 0 },
 
-    employment: null, // {firmId, track, titleIndex, monthsInTitle, monthsAtFirm, perfAccum:[], strikes}
+    employment: null, // {firmId, track, titleIndex, monthsInTitle, monthsAtFirm, perfAccum:[], strikes, hireMonth}
     ibExperienceMonths: 0,
     careerMonthsWorked: 0,
+
+    firmCooldowns: {}, // firmId -> month number you can reapply
+    interviewsThisMonth: 0,
+    jobHopCount: 0,
+    jobHopPenaltyUntil: 0, // month number; reputation/hire-chance stigma from quitting too soon
 
     education: { inMBA: false, mbaMonthsLeft: 0, hasMBA: false, mbaOfferMade: false },
 

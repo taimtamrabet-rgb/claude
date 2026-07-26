@@ -1,7 +1,8 @@
 /* ==========================================================================
    MINIGAMES.JS — the "actually do the work" mandatory monthly minigames.
-   Two variants (Model Crunch, All-Nighter Reflex) alternate/roll randomly.
-   Both resolve to a 0..1 performance score fed back into ENGINE.finishMonth.
+   Four variants (Model Crunch, All-Nighter Reflex, Inbox Triage, Client
+   Call Sequence) are picked at random. Each resolves to a 0..1 performance
+   score fed back into ENGINE.finishMonth (or into an interview's score).
    ========================================================================== */
 
 const MINIGAMES = {};
@@ -112,7 +113,7 @@ function shuffleOptions(correctVal, distractors) {
 
 const CRUNCH_EASY_GENERATORS = [genQ_timeSum, genQ_budgetSplit, genQ_emailPace, genQ_growth];
 const CRUNCH_HARD_GENERATORS = [genQ_multiple, genQ_wacc, genQ_eps];
-const MODEL_CRUNCH_TIMER_SECONDS = 20;
+const MODEL_CRUNCH_TIMER_SECONDS = 12;
 
 function crunchDifficultyWeights() {
   if (!STATE.employment) return { easy: 0.8, hard: 0.2 }; // MBA study / unemployed practice
@@ -131,7 +132,7 @@ function pickCrunchGenerator() {
 /* ---------------- Model Crunch minigame ---------------- */
 
 function launchModelCrunch(title, onDone) {
-  const TOTAL = 5;
+  const TOTAL = 3;
   let idx = 0, correct = 0, timer = null;
   const startEnergy = STATE.energy;
 
@@ -188,7 +189,7 @@ function launchModelCrunch(title, onDone) {
 /* ---------------- All-Nighter Reflex minigame ---------------- */
 
 function launchReflex(title, onDone) {
-  const ROUNDS = 5;
+  const ROUNDS = 3;
   let round = 0;
   let scores = [];
   const startEnergy = STATE.energy;
@@ -206,7 +207,7 @@ function launchReflex(title, onDone) {
     const box = document.getElementById("reflex-box");
     let goTime = null;
     let resolved = false;
-    const delay = rand(700, 2400);
+    const delay = rand(500, 1600);
     const earlyTimer = setTimeout(() => {
       box.classList.remove("waiting");
       box.classList.add("go");
@@ -273,10 +274,10 @@ const TRIAGE_ACTIONS = [
   { key: "delegate", label: "Delegate" },
   { key: "ignore", label: "Ignore" }
 ];
-const TRIAGE_TIMER_SECONDS = 12;
+const TRIAGE_TIMER_SECONDS = 8;
 
 function launchInboxTriage(title, onDone) {
-  const ROUNDS = 5;
+  const ROUNDS = 3;
   const pool = TRIAGE_SCENARIOS.slice();
   for (let i = pool.length - 1; i > 0; i--) {
     const j = randInt(0, i);
@@ -346,7 +347,7 @@ function launchInboxTriage(title, onDone) {
 const SEQUENCE_CLIENTS = ["Client A", "Client B", "Client C", "Client D"];
 
 function launchClientSequence(title, onDone) {
-  const MAX_ROUNDS = 5;
+  const MAX_ROUNDS = 3;
   const sequence = [];
   let roundsCompleted = 0;
   const startEnergy = STATE.energy;
@@ -367,14 +368,14 @@ function launchClientSequence(title, onDone) {
     renderBoard(-1, true);
     let i = 0;
     const step = () => {
-      if (i >= sequence.length) { setTimeout(startInput, 300); return; }
+      if (i >= sequence.length) { setTimeout(startInput, 200); return; }
       renderBoard(sequence[i], true);
       setTimeout(() => {
         renderBoard(-1, true);
-        setTimeout(() => { i++; step(); }, 200);
-      }, 550);
+        setTimeout(() => { i++; step(); }, 130);
+      }, 400);
     };
-    setTimeout(step, 400);
+    setTimeout(step, 250);
   }
 
   function startInput() {
@@ -411,7 +412,7 @@ function launchClientSequence(title, onDone) {
     onDone(score, raw);
   }
 
-  sequence.push(randInt(0, 3), randInt(0, 3), randInt(0, 3));
+  sequence.push(randInt(0, 3), randInt(0, 3));
   playback();
 }
 

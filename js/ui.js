@@ -170,6 +170,9 @@ UI.skillBarsHTML = function () {
 UI.renderCareer = function () {
   let html = "";
 
+  const usedInterviews = STATE.interviewsThisMonth || 0;
+  html += `<p class="muted">Interviews this month: ${usedInterviews}/${INTERVIEWS_PER_MONTH_CAP}${STATE.jobHopPenaltyUntil > STATE.totalMonths ? " · Firms have heard you don't stick around — hiring is tougher for you right now." : ""}</p>`;
+
   if (STATE.employment) {
     html += UI.renderCurrentJobCard();
   } else if (STATE.education.inMBA) {
@@ -204,11 +207,14 @@ UI.renderCurrentJobCard = function () {
   const e = STATE.employment;
   const firm = currentFirm();
   const titles = e.track === "IB" ? DATA.TITLES_IB : DATA.TITLES_PE;
+  const tenure = STATE.totalMonths - (e.hireMonth || 0);
+  const wouldHop = tenure < JOB_HOP_TENURE_THRESHOLD_MONTHS;
   return `<div class="card highlight">
     <h3>${firm.name} — ${titles[e.titleIndex]}</h3>
     <p>${firm.blurb}</p>
     <p>Base Salary: <b>${fmtMoney(currentBaseSalary())}</b>/yr</p>
     <p class="muted">Months at firm: ${e.monthsAtFirm} · Strikes: ${e.strikes}/3</p>
+    ${wouldHop ? `<p class="locked">Quitting before ${JOB_HOP_TENURE_THRESHOLD_MONTHS} months hurts your reputation and makes hiring elsewhere harder for a while.</p>` : ""}
     <div class="btn-row">
       <button class="btn btn-danger" onclick="UI.resign()">Resign</button>
     </div>
@@ -239,8 +245,11 @@ UI.firmCardHTML = function (f) {
 };
 
 UI.applyToFirm = function (firmId, track) {
-  if (!hasEnergy(12)) { UI.toast("Too exhausted for an interview right now.", true); return; }
-  spendEnergy(12);
+  const capCheck = ENGINE.canInterviewThisMonth();
+  if (!capCheck.ok) { UI.toast(capCheck.msg, true); return; }
+  if (!hasEnergy(20)) { UI.toast("Too exhausted for an interview right now.", true); return; }
+  spendEnergy(20);
+  STATE.interviewsThisMonth = (STATE.interviewsThisMonth || 0) + 1;
   save();
   INTERVIEW.start(firmId, track, () => UI.renderAll());
 };

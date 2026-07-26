@@ -53,6 +53,11 @@ ENGINE.doTraining = function (actionId) {
 
 /* ---------------- Career: applying & hiring ---------------- */
 
+const INTERVIEWS_PER_MONTH_CAP = 2;
+const FIRM_REJECTION_COOLDOWN_MONTHS = 3;
+const JOB_HOP_TENURE_THRESHOLD_MONTHS = 6;
+const JOB_HOP_STIGMA_MONTHS = 6;
+
 ENGINE.firmEligibility = function (firmId) {
   const firm = DATA.FIRMS.find(f => f.id === firmId);
   const reasons = [];
@@ -61,7 +66,21 @@ ENGINE.firmEligibility = function (firmId) {
   }
   if (STATE.skills.networking < firm.reqNetworking) reasons.push(`Needs Networking ${firm.reqNetworking}+ (you: ${STATE.skills.networking}).`);
   if (STATE.skills.communication < firm.reqComm) reasons.push(`Needs Communication ${firm.reqComm}+ (you: ${STATE.skills.communication}).`);
+  const cooldownUntil = (STATE.firmCooldowns || {})[firmId];
+  if (cooldownUntil && cooldownUntil > STATE.totalMonths) {
+    reasons.push(`They passed on you recently — try again in ${cooldownUntil - STATE.totalMonths} month(s).`);
+  }
   return { eligible: reasons.length === 0, reasons };
+};
+
+// Separate from per-firm eligibility: caps how many interviews you can
+// even attempt in a single month, so you can't just spam every firm at once.
+ENGINE.canInterviewThisMonth = function () {
+  const used = STATE.interviewsThisMonth || 0;
+  if (used >= INTERVIEWS_PER_MONTH_CAP) {
+    return { ok: false, msg: `You've already got ${used} interview${used === 1 ? "" : "s"} on your plate this month. Recruiters need time — try again next month.` };
+  }
+  return { ok: true };
 };
 
 ENGINE.hireAtFirm = function (firmId, track, offerScore) {
@@ -77,7 +96,8 @@ ENGINE.hireAtFirm = function (firmId, track, offerScore) {
     monthsAtFirm: 0,
     perfAccum: [],
     yearPerfAccum: [],
-    strikes: 0
+    strikes: 0,
+    hireMonth: STATE.totalMonths
   };
   addReputation(5);
   logEvent(`You accepted an offer from ${firm.name} as ${track === "IB" ? DATA.TITLES_IB[titleIndex] : DATA.TITLES_PE[titleIndex]}!`);
@@ -87,7 +107,14 @@ ENGINE.hireAtFirm = function (firmId, track, offerScore) {
 ENGINE.resign = function () {
   if (!STATE.employment) return;
   const firm = currentFirm();
+  const tenure = STATE.totalMonths - (STATE.employment.hireMonth || 0);
   logEvent(`You resigned from ${firm.name}.`);
+  if (tenure < JOB_HOP_TENURE_THRESHOLD_MONTHS) {
+    STATE.jobHopCount = (STATE.jobHopCount || 0) + 1;
+    STATE.jobHopPenaltyUntil = STATE.totalMonths + JOB_HOP_STIGMA_MONTHS;
+    addReputation(-12);
+    logEvent(`Only ${tenure} month(s) there — word gets around about candidates who don't stick. Your reputation took a hit.`);
+  }
   STATE.employment = null;
   addStress(10);
   save();
@@ -322,9 +349,15 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
   else if (finalScore >= 0.22) outcome = "borderline";
   else outcome = "reject";
 
+  function setRejectionCooldown() {
+    STATE.firmCooldowns = STATE.firmCooldowns || {};
+    STATE.firmCooldowns[firmId] = STATE.totalMonths + FIRM_REJECTION_COOLDOWN_MONTHS;
+  }
+
   if (outcome === "reject") {
     logEvent(`${firm.name} passed on you this round. Keep networking and sharpen up.`);
     addStress(5);
+    setRejectionCooldown();
     save();
     return { hired: false, outcome };
   }
@@ -335,6 +368,10 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
   const tierBaseChance = { strong: 0.92, pass: 0.72, borderline: 0.45 }[outcome];
   let hireChance = clamp(tierBaseChance - competitiveness * 0.5, 0.04, 0.97);
 
+  // A recent history of quitting jobs fast follows you around -- firms hear about it.
+  const hoppingStigma = (STATE.jobHopPenaltyUntil || 0) > STATE.totalMonths;
+  if (hoppingStigma) hireChance = clamp(hireChance - 0.15, 0.03, 0.97);
+
   // A near-perfect (100/100) interview is memorable enough to blow past
   // ordinary competitiveness -- everyone wants the candidate who nailed it.
   if (scorePct >= 0.97) hireChance = Math.max(hireChance, 0.95);
@@ -342,6 +379,7 @@ ENGINE.resolveInterview = function (firmId, track, scorePct) {
   if (Math.random() > hireChance) {
     logEvent(`${firm.name} liked what they saw, but the seat went to another candidate — roles at a ${firm.tier} shop are brutally competitive.`);
     addStress(4);
+    setRejectionCooldown();
     save();
     return { hired: false, outcome };
   }
@@ -527,6 +565,7 @@ ENGINE.finishMonth = function (perfScore) {
   // Age up
   STATE.ageMonths++;
   STATE.totalMonths++;
+  STATE.interviewsThisMonth = 0;
   if (STATE.ageMonths >= 12) {
     STATE.ageMonths = 0;
     STATE.ageYears++;
